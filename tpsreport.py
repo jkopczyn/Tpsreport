@@ -6,12 +6,14 @@ import dateparser
 
 class RFCReport:
     def __init__(self):
+        print "Logging in to Salesforce API..."
         self.sf = Salesforce(username=config.username,
                              password=config.password,
                              security_token=config.security_token)
         self.closerTeam = dict()
         self.caseData = None
         self.filteredCases = list()
+        print "Login successful."
 
     def jsonizer(self, rawdata):
         jsondata = json.dumps(
@@ -23,6 +25,7 @@ class RFCReport:
         return jsondata
 
     def getTeam(self):
+        print "Querying Tier 2 team members..."
         data = self.sf.query(
             ''.join((
                 "SELECT Id ",
@@ -35,9 +38,11 @@ class RFCReport:
             jname = json.loads(self.jsonizer(rname))
             name = jname["Name"]
             self.closerTeam[member["Id"]] = name
+        print "Found", len(self.closerTeam), "team members."
 
     def getData(self):
-        data = self.sf.query(
+        print "Querying SFDC cases in", config.SFDCdaterange, "..."
+        data = self.sf.query_all(
             ''.join((
                 "SELECT CaseNumber, Id, ",
                 "(SELECT Field, NewValue ",
@@ -47,27 +52,45 @@ class RFCReport:
                 "where (Status = 'Closed' or ",
                 "Status = 'Ready For Close') ",
                 "and Type = 'support' ",
-                "and LastModifiedDate = LAST_WEEK"
+                "and LastModifiedDate = ",
+                config.SFDCdaterange
             )))
         self.caseData = json.loads(self.jsonizer(data))
+        print "Got", self.caseData["totalSize"], \
+            "cases in", config.SFDCdaterange
 
     def checkTeam(self):
+        subquery = list()
         for record in self.caseData["records"]:
             if record["Histories"]:
                 for x in record["Histories"]["records"]:
                     if x["NewValue"] in self.closerTeam:
-                        print x["NewValue"], record["CaseNumber"]
-                        self.filteredCases.append(
-                            (self.sf.query_all(
-                                ''.join((
-                                    "SELECT InsertedById, CreatedDate, "
-                                    "ParentID, ",
-                                    "(SELECT NewValue, FieldName ",
-                                    "from FeedTrackedChanges) ",
-                                    "from CaseFeed ",
-                                    "where ParentId = '",
-                                    record["Id"], "'"
-                                )))))
+                        name = self.closerTeam[x["NewValue"]]
+                        casenum = record["CaseNumber"]
+                        caseid = record["Id"]
+                        subquery.append(caseid)
+        print "Found", len(subquery), "T2-involved cases."
+        print "Querying case details."
+        sqsplit = len(subquery)/2
+        squeries = (subquery[:sqsplit], subquery[sqsplit+1:])
+        for each in squeries:
+            newsquery = "','".join(each)
+            newsquery = "('" + newsquery + "')"
+            result = self.sf.query_all(
+                ''.join((
+                    "SELECT InsertedById, CreatedDate, "
+                    "ParentID, ",
+                    "(SELECT NewValue, FieldName ",
+                    "from FeedTrackedChanges) ",
+                    "from CaseFeed ",
+                    "where ParentId IN ",
+                    newsquery,
+                    " and CreatedDate = ",
+                    config.SFDCdaterange
+                )))
+            self.filteredCases.append(result)
+        self.filteredCases = self.jsonizer(self.filteredCases)
+        print "Found", self.filteredCases["totalSize"], "histories."
 
     def genReport(self):
         for record in self.filteredCases:
