@@ -50,7 +50,7 @@ for record in parsedresults["records"]:
                             "from CaseFeed ",
                             "where ParentId = '",
                             record["Id"], "'"
-                     )))))
+                        )))))
 
 tier2json = json.dumps(
     tier2only,
@@ -64,9 +64,9 @@ tier2parsed = json.loads(tier2json)
 for record in tier2parsed:
     for change in record[2]["records"]:
         if change["FeedTrackedChanges"]["records"][0]["NewValue"] == \
-            "Ready For Close":
-                print "Name: ", record[0]
-                print "Case: ", record[1]
-                print "Status: Ready For Close"
-                print "Date: ", dateparser.parse(
-                        change["LastModifiedDate"])
+                "Ready For Close":
+            print "Name: ", record[0]
+            print "Case: ", record[1]
+            print "Status: Ready For Close"
+            print "Date: ", dateparser.parse(
+                change["LastModifiedDate"])
