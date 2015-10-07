@@ -20,8 +20,7 @@ class RFCReport:
             indent=4,
             separators=(',', ': ')
         )
-        parsedata = json.loads(jsondata)
-        return parsedata
+        return jsondata
 
     def getTeam(self):
         data = self.sf.query(
@@ -30,10 +29,10 @@ class RFCReport:
                 "from User ",
                 "where (UserRoleId = '00Ea0000001jJ6vEAE')"
             )))
-        team = self.jsonizer(data)
+        team = json.loads(self.jsonizer(data))
         for member in team["records"]:
             rname = self.sf.User.get(member["Id"])
-            jname = self.jsonizer(rname)
+            jname = json.loads(self.jsonizer(rname))
             name = jname["Name"]
             self.closerTeam[member["Id"]] = name
 
@@ -45,11 +44,12 @@ class RFCReport:
                 "from Histories ",
                 "WHERE Field = 'Owner') ",
                 "from Case ",
-                "where isClosed = True ",
+                "where (Status = 'Closed' or ",
+                "Status = 'Ready For Close') ",
                 "and Type = 'support' ",
-                "and ClosedDate = LAST_WEEK"
+                "and LastModifiedDate = LAST_WEEK"
             )))
-        self.caseData = self.jsonizer(data)
+        self.caseData = json.loads(self.jsonizer(data))
 
     def checkTeam(self):
         for record in self.caseData["records"]:
@@ -58,32 +58,35 @@ class RFCReport:
                     if x["NewValue"] in self.closerTeam:
                         print x["NewValue"], record["CaseNumber"]
                         self.filteredCases.append(
-                            (self.closerTeam[x["NewValue"]],
-                             record["CaseNumber"],
-                             self.sf.query_all(
-                                 ''.join((
-                                     "SELECT Id, LastModifiedDate, ",
-                                     "(SELECT NewValue, FieldName ",
-                                     "from FeedTrackedChanges) ",
-                                     "from CaseFeed ",
-                                     "where ParentId = '",
-                                     record["Id"], "'"
-                                 )))))
+                            (self.sf.query_all(
+                                ''.join((
+                                    "SELECT InsertedById, CreatedDate, "
+                                    "ParentID, ",
+                                    "(SELECT NewValue, FieldName ",
+                                    "from FeedTrackedChanges) ",
+                                    "from CaseFeed ",
+                                    "where ParentId = '",
+                                    record["Id"], "'"
+                                )))))
 
     def genReport(self):
         for record in self.filteredCases:
-            for change in record[2]["records"]:
-                if change["FeedTrackedChanges"]["records"][0]["NewValue"] == \
-                        "Ready For Close":
-                    print "Name: ", record[0]
-                    print "Case: ", record[1]
-                    print "Status: Ready For Close"
-                    print "Date: ", dateparser.parse(
-                        change["LastModifiedDate"])
+            for change in record["records"]:
+                if change["InsertedById"] not in self.closerTeam:
+                    break
+                for line in change["FeedTrackedChanges"]["records"]:
+                    if line["NewValue"] in ("Ready For Close", "Closed"):
+                        print "Name: ", self.closerTeam[
+                            change["InsertedById"]]
+                        print "Case: ", change["ParentId"]
+                        print "Status: ", line["NewValue"]
+                        print "Date: ", dateparser.parse(
+                            change["CreatedDate"])
 
 
 newreport = RFCReport()
 newreport.getTeam()
 newreport.getData()
 newreport.checkTeam()
+#print newreport.jsonizer(newreport.filteredCases)
 newreport.genReport()
