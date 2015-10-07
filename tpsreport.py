@@ -12,7 +12,9 @@ class RFCReport:
                              security_token=config.security_token)
         self.closerTeam = dict()
         self.caseData = None
-        self.filteredCases = list()
+        self.filteredCases = None
+        self.reportData = list()
+        self.summaryReport = dict()
         print "Login successful."
 
     def jsonizer(self, rawdata):
@@ -25,12 +27,13 @@ class RFCReport:
         return jsondata
 
     def getTeam(self):
-        print "Querying Tier 2 team members..."
+        print "Querying Escalations team members..."
         data = self.sf.query(
             ''.join((
                 "SELECT Id ",
                 "from User ",
-                "where (UserRoleId = '00Ea0000001jJ6vEAE')"
+                "where UserRoleId = '",
+                config.reportrole, "'"
             )))
         team = json.loads(self.jsonizer(data))
         for member in team["records"]:
@@ -57,7 +60,19 @@ class RFCReport:
             )))
         self.caseData = json.loads(self.jsonizer(data))
         print "Got", self.caseData["totalSize"], \
-            "cases in", config.SFDCdaterange
+            "rows in", config.SFDCdaterange
+
+    def genReport(self, data):
+        for change in data["records"]:
+            if change["InsertedById"] not in self.closerTeam:
+                continue
+            for line in change["FeedTrackedChanges"]["records"]:
+                if line["NewValue"] in ("Ready For Close", "Closed"):
+                    self.reportData.append(
+                        dict(Name=self.closerTeam[change["InsertedById"]],
+                             Case=change["ParentId"],
+                             Status=line["NewValue"],
+                             Date=dateparser.parse(change["CreatedDate"])))
 
     def checkTeam(self):
         subquery = list()
@@ -69,10 +84,10 @@ class RFCReport:
                         casenum = record["CaseNumber"]
                         caseid = record["Id"]
                         subquery.append(caseid)
-        print "Found", len(subquery), "T2-involved cases."
+        print "Found", len(subquery), "Escalations-involved cases."
         print "Querying case details."
-        sqsplit = len(subquery)/2
-        squeries = (subquery[:sqsplit], subquery[sqsplit+1:])
+        sqsplit = len(subquery) / 2
+        squeries = (subquery[:sqsplit], subquery[sqsplit + 1:])
         for each in squeries:
             newsquery = "','".join(each)
             newsquery = "('" + newsquery + "')"
@@ -88,28 +103,40 @@ class RFCReport:
                     " and CreatedDate = ",
                     config.SFDCdaterange
                 )))
-            self.filteredCases.append(result)
-        self.filteredCases = self.jsonizer(self.filteredCases)
-        print "Found", self.filteredCases["totalSize"], "histories."
+            # print self.jsonizer(result)
+            self.genReport(json.loads(self.jsonizer(result)))
 
-    def genReport(self):
-        for record in self.filteredCases:
-            for change in record["records"]:
-                if change["InsertedById"] not in self.closerTeam:
-                    break
-                for line in change["FeedTrackedChanges"]["records"]:
-                    if line["NewValue"] in ("Ready For Close", "Closed"):
-                        print "Name: ", self.closerTeam[
-                            change["InsertedById"]]
-                        print "Case: ", change["ParentId"]
-                        print "Status: ", line["NewValue"]
-                        print "Date: ", dateparser.parse(
-                            change["CreatedDate"])
+    def sumReport(self):
+        self.summaryReport["CaseCount"] = dict()
+        self.summaryReport["ClosedCount"] = dict()
+        self.summaryReport["RFCCount"] = dict()
 
+        for case in self.reportData:
+            if case["Name"] not in self.summaryReport["CaseCount"]:
+                self.summaryReport["CaseCount"][case["Name"]] = set()
+                self.summaryReport["ClosedCount"][case["Name"]] = set()
+                self.summaryReport["RFCCount"][case["Name"]] = set()
+            self.summaryReport["CaseCount"][case["Name"]].add(case["Case"])
+            if case["Status"] == "Closed":
+                self.summaryReport[
+                    "ClosedCount"][case["Name"]].add(case["Case"])
+            if case["Status"] == "Ready For Close":
+                self.summaryReport[
+                    "RFCCount"][case["Name"]].add(case["Case"])
+
+    def printReport(self):
+        for each in self.summaryReport["CaseCount"]:
+            print each
+            print len(self.summaryReport["CaseCount"][each]), "cases handled"
+            print len(self.summaryReport["ClosedCount"][each]), "Closed cases"
+            print len(self.summaryReport["RFCCount"][each]), "cases marked " \
+                                                             "Ready for Close"
 
 newreport = RFCReport()
 newreport.getTeam()
 newreport.getData()
+# print newreport.jsonizer(newreport.caseData)
 newreport.checkTeam()
-#print newreport.jsonizer(newreport.filteredCases)
-newreport.genReport()
+# print newreport.reportData
+newreport.sumReport()
+newreport.printReport()
