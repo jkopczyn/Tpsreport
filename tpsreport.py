@@ -3,6 +3,15 @@ import config
 import json
 import dateparser
 import random
+from frozendict import frozendict
+
+
+class TeamMember:
+    def __init__(self, name):
+        self.name = name
+        self.caseCount = set()
+        self.rfcCount = set()
+        self.closedCount = set()
 
 
 class RFCReport:
@@ -13,13 +22,11 @@ class RFCReport:
                              password=config.password,
                              security_token=config.security_token)
         self.closerTeam = dict()
+        self.listedUsers = dict()
         self.caseData = None
         self.filteredCases = None
-        self.reportData = list()
-        self.summaryReport = dict()
-        self.caseCount = dict()
-        self.closedCount = dict()
-        self.rfcCount = dict()
+        self.reportData = dict()
+        self.dupecount = 0
         print "Login successful."
 
     def jsonizer(self, rawdata):
@@ -78,11 +85,19 @@ class RFCReport:
                 continue
             for line in change["FeedTrackedChanges"]["records"]:
                 if line["NewValue"] in ("Ready For Close", "Closed"):
-                    self.reportData.append(
-                        dict(Name=self.closerTeam[change["InsertedById"]],
-                             Case=change["ParentId"],
-                             Status=line["NewValue"],
-                             Date=dateparser.parse(change["CreatedDate"])))
+                    caseid = change["ParentId"]
+                    changedate = dateparser.parse(change["CreatedDate"])
+                    # need to account for more than one t2 on a case
+                    if caseid in self.reportData:
+                        # chronological order - latest gets it
+                        if self.reportData[caseid]["Date"] > changedate:
+                            self.dupecount += 1
+                            continue
+                    self.reportData[caseid] = frozendict(
+                        Name=self.closerTeam[change["InsertedById"]],
+                        Case=caseid,
+                        Status=line["NewValue"],
+                        Date=changedate)
 
     def checkTeam(self):
         # look for cases our team was involved in
@@ -95,14 +110,15 @@ class RFCReport:
                         casenum = record["CaseNumber"]
                         caseid = record["Id"]
                         subquery.add(caseid)
-        print "Found", len(subquery), "Escalations-involved cases."
-        print "Querying case details."
+        print "Found", len(subquery), "unique Escalations-involved cases."
+        print "Querying case details..."
         # list of cases is too large for SOQL query, split it
         sqsplit = len(subquery) / 2
         set1 = set(random.sample(subquery, sqsplit))
         subquery -= set1
         squeries = (set1, subquery)
         # run each split query, scrub each into reports
+        print "Filtering and de-duplicating..."
         for each in squeries:
             newsquery = "','".join(each)
             newsquery = "('" + newsquery + "')"
@@ -120,32 +136,33 @@ class RFCReport:
                     config.SFDCdaterange
                 )))
             self.genReport(json.loads(self.jsonizer(result)))
+        print "Found and removed", self.dupecount, "cases handled twice."
 
     def sumReport(self):
         # generate summaries of data
         print "Generating summaries..."
-        for case in self.reportData:
+        for case in self.reportData.itervalues():
             name = case["Name"]
-            if name not in self.caseCount:
-                self.caseCount[name] = set()
-                self.closedCount[name] = set()
-                self.rfcCount[name] = set()
-            self.caseCount[name].add(case["Case"])
+            casenum = case["Case"]
+            if name not in self.listedUsers:
+                self.listedUsers[name] = TeamMember(name)
+            nameobj = self.listedUsers[name]
+            nameobj.caseCount.add(case)
             if case["Status"] == "Ready For Close":
-                self.closedCount[name].discard(case["Case"])
-                self.rfcCount[name].add(case["Case"])
+                nameobj.closedCount.discard(case)
+                nameobj.rfcCount.add(case)
             if case["Status"] == "Closed":
-                self.closedCount[name].add(case["Case"])
-                self.rfcCount[name].discard(case["Case"])
+                nameobj.closedCount.add(case)
+                nameobj.rfcCount.discard(case)
 
     def printReport(self):
         # print the results
         print "Reticulating splines..."
-        for each in self.caseCount:
-            print each
-            print len(self.caseCount[each]), "cases handled"
-            print len(self.closedCount[each]), "Closed cases"
-            print len(self.rfcCount[each]), "cases marked Ready for Close"
+        for each in self.listedUsers.itervalues():
+            print each.name
+            print len(each.caseCount), "cases handled"
+            print len(each.closedCount), "Closed cases"
+            print len(each.rfcCount), "cases marked Ready for Close"
 
 
 if __name__ == "__main__":
