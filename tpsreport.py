@@ -1,6 +1,7 @@
 from simple_salesforce import Salesforce
 import config
 import json
+import dateparser
 
 sf = Salesforce(username=config.username,
                 password=config.password,
@@ -40,9 +41,10 @@ for record in parsedresults["records"]:
                 print x["NewValue"], record["CaseNumber"]
                 tier2only.append(
                     (config.Closers[x["NewValue"]],
+                     record["CaseNumber"],
                     sf.query_all(
                         ''.join((
-                            "SELECT Title, LastModifiedDate, ",
+                            "SELECT Id, LastModifiedDate, ",
                             "(SELECT NewValue, FieldName ",
                             "from FeedTrackedChanges) ",
                             "from CaseFeed ",
@@ -57,4 +59,14 @@ tier2json = json.dumps(
     separators=(',', ': ')
 )
 
-print tier2json
+tier2parsed = json.loads(tier2json)
+
+for record in tier2parsed:
+    for change in record[2]["records"]:
+        if change["FeedTrackedChanges"]["records"][0]["NewValue"] == \
+            "Ready For Close":
+                print "Name: ", record[0]
+                print "Case: ", record[1]
+                print "Status: Ready For Close"
+                print "Date: ", dateparser.parse(
+                        change["LastModifiedDate"])
