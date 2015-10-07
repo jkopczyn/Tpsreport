@@ -2,11 +2,13 @@ from simple_salesforce import Salesforce
 import config
 import json
 import dateparser
+import random
 
 
 class RFCReport:
     def __init__(self):
         print "Logging in to Salesforce API..."
+        # initialize our SFDC connection
         self.sf = Salesforce(username=config.username,
                              password=config.password,
                              security_token=config.security_token)
@@ -15,9 +17,14 @@ class RFCReport:
         self.filteredCases = None
         self.reportData = list()
         self.summaryReport = dict()
+        self.caseCount = dict()
+        self.closedCount = dict()
+        self.rfcCount = dict()
         print "Login successful."
 
     def jsonizer(self, rawdata):
+        # pretty prints SOQL dumps.
+        # Run through this and then json.loads() to smooth data.
         jsondata = json.dumps(
             rawdata,
             sort_keys=True,
@@ -27,6 +34,7 @@ class RFCReport:
         return jsondata
 
     def getTeam(self):
+        # figure out who we're interested in based on SFDC role
         print "Querying Escalations team members..."
         data = self.sf.query(
             ''.join((
@@ -44,6 +52,7 @@ class RFCReport:
         print "Found", len(self.closerTeam), "team members."
 
     def getData(self):
+        # initial data set query
         print "Querying SFDC cases in", config.SFDCdaterange, "..."
         data = self.sf.query_all(
             ''.join((
@@ -63,6 +72,7 @@ class RFCReport:
             "rows in", config.SFDCdaterange
 
     def genReport(self, data):
+        # scrub data to reportable dict form
         for change in data["records"]:
             if change["InsertedById"] not in self.closerTeam:
                 continue
@@ -75,7 +85,8 @@ class RFCReport:
                              Date=dateparser.parse(change["CreatedDate"])))
 
     def checkTeam(self):
-        subquery = list()
+        # look for cases our team was involved in
+        subquery = set()
         for record in self.caseData["records"]:
             if record["Histories"]:
                 for x in record["Histories"]["records"]:
@@ -83,14 +94,19 @@ class RFCReport:
                         name = self.closerTeam[x["NewValue"]]
                         casenum = record["CaseNumber"]
                         caseid = record["Id"]
-                        subquery.append(caseid)
+                        subquery.add(caseid)
         print "Found", len(subquery), "Escalations-involved cases."
         print "Querying case details."
+        # list of cases is too large for SOQL query, split it
         sqsplit = len(subquery) / 2
-        squeries = (subquery[:sqsplit], subquery[sqsplit + 1:])
+        set1 = set(random.sample(subquery, sqsplit))
+        subquery -= set1
+        squeries = (set1, subquery)
+        # run each split query, scrub each into reports
         for each in squeries:
             newsquery = "','".join(each)
             newsquery = "('" + newsquery + "')"
+            # structure query that pulls all TrackedChanges for case IDs
             result = self.sf.query_all(
                 ''.join((
                     "SELECT InsertedById, CreatedDate, "
@@ -103,40 +119,42 @@ class RFCReport:
                     " and CreatedDate = ",
                     config.SFDCdaterange
                 )))
-            # print self.jsonizer(result)
             self.genReport(json.loads(self.jsonizer(result)))
 
     def sumReport(self):
-        self.summaryReport["CaseCount"] = dict()
-        self.summaryReport["ClosedCount"] = dict()
-        self.summaryReport["RFCCount"] = dict()
-
+        # generate summaries of data
+        print "Generating summaries..."
         for case in self.reportData:
-            if case["Name"] not in self.summaryReport["CaseCount"]:
-                self.summaryReport["CaseCount"][case["Name"]] = set()
-                self.summaryReport["ClosedCount"][case["Name"]] = set()
-                self.summaryReport["RFCCount"][case["Name"]] = set()
-            self.summaryReport["CaseCount"][case["Name"]].add(case["Case"])
-            if case["Status"] == "Closed":
-                self.summaryReport[
-                    "ClosedCount"][case["Name"]].add(case["Case"])
+            name = case["Name"]
+            if name not in self.caseCount:
+                self.caseCount[name] = set()
+                self.closedCount[name] = set()
+                self.rfcCount[name] = set()
+            self.caseCount[name].add(case["Case"])
             if case["Status"] == "Ready For Close":
-                self.summaryReport[
-                    "RFCCount"][case["Name"]].add(case["Case"])
+                self.closedCount[name].discard(case["Case"])
+                self.rfcCount[name].add(case["Case"])
+            if case["Status"] == "Closed":
+                self.closedCount[name].add(case["Case"])
+                self.rfcCount[name].discard(case["Case"])
 
     def printReport(self):
-        for each in self.summaryReport["CaseCount"]:
+        # print the results
+        print "Reticulating splines..."
+        for each in self.caseCount:
             print each
-            print len(self.summaryReport["CaseCount"][each]), "cases handled"
-            print len(self.summaryReport["ClosedCount"][each]), "Closed cases"
-            print len(self.summaryReport["RFCCount"][each]), "cases marked " \
-                                                             "Ready for Close"
+            print len(self.caseCount[each]), "cases handled"
+            print len(self.closedCount[each]), "Closed cases"
+            print len(self.rfcCount[each]), "cases marked Ready for Close"
 
-newreport = RFCReport()
-newreport.getTeam()
-newreport.getData()
-# print newreport.jsonizer(newreport.caseData)
-newreport.checkTeam()
-# print newreport.reportData
-newreport.sumReport()
-newreport.printReport()
+
+if __name__ == "__main__":
+    # main execution steps
+    newreport = RFCReport()
+    newreport.getTeam()
+    newreport.getData()
+    # print newreport.jsonizer(newreport.caseData)
+    newreport.checkTeam()
+    # print newreport.reportData
+    newreport.sumReport()
+    newreport.printReport()
