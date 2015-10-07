@@ -1,6 +1,5 @@
 from simple_salesforce import Salesforce
 import config
-import collections
 import json
 
 sf = Salesforce(username=config.username,
@@ -8,15 +7,54 @@ sf = Salesforce(username=config.username,
                 security_token=config.security_token)
 
 testresults = sf.query(
-    "SELECT CaseNumber, (SELECT Field, OldValue, NewValue from Histories WHERE Field = 'Status') from Case where OwnerId = "
-    + config.Maverick
-    + " AND status = 'resolving internally'")
+    ''.join(
+        (
+            "SELECT CaseNumber, Id, ",
+            "(SELECT Field, NewValue ",
+            "from Histories ",
+            "WHERE Field = 'Owner') ",
+            "from Case ",
+            "where isClosed = True ",
+            "and Type = 'support' ",
+            "and ClosedDate = LAST_WEEK"
+        )
+    )
+)
 
-jsonresults = json.dumps(testresults, sort_keys=True, indent=4, separators=(',',': '))
-#print jsonresults
+jsonresults = json.dumps(
+    testresults,
+    sort_keys=True,
+    indent=4,
+    separators=(',', ': ')
+)
 
 parsedresults = json.loads(jsonresults)
+print parsedresults['totalSize']
+
+tier2only = list()
+
 for record in parsedresults["records"]:
-    print record["CaseNumber"]
-    for x in record["Histories"]["records"]:
-        print x["NewValue"]
+    if record["Histories"]:
+        for x in record["Histories"]["records"]:
+            if x["NewValue"] in config.Closers:
+                print x["NewValue"], record["CaseNumber"]
+                tier2only.append(
+                    (config.Closers[x["NewValue"]],
+                    sf.query_all(
+                        ''.join((
+                            "SELECT Title, LastModifiedDate, ",
+                            "(SELECT NewValue, FieldName ",
+                            "from FeedTrackedChanges) ",
+                            "from CaseFeed ",
+                            "where ParentId = '",
+                            record["Id"], "'"
+                     )))))
+
+tier2json = json.dumps(
+    tier2only,
+    sort_keys=True,
+    indent=4,
+    separators=(',', ': ')
+)
+
+print tier2json
