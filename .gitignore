@@ -5,6 +5,7 @@ logs
 
 #configs
 config
+/servlet.png
 config.*
 *.config
 *.cfg
