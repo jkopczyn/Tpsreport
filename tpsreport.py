@@ -4,7 +4,16 @@ import json
 import dateparser
 import random
 from frozendict import frozendict
-import operator
+import win32com.client
+
+
+def fileToStr(fileName):
+    """Return a string containing the contents of the named file."""
+    fin = open(fileName);
+    contents = fin.read();
+    fin.close()
+    return contents
+
 
 class TeamMember:
     def __init__(self, name):
@@ -27,6 +36,7 @@ class RFCReport:
         self.filteredCases = None
         self.reportData = dict()
         self.dupecount = 0
+        self.message = ""
         print "Login successful."
 
     def jsonizer(self, rawdata):
@@ -173,18 +183,29 @@ class RFCReport:
         # print the results
         print "Reticulating splines..."
         for each in self.listedUsers.itervalues():
-            each.html = list()
-            each.html.append('')
-            each.html.append("<tr>")
-            each.html.append("<td>" + each.name + "</td>")
-            each.html.append("<td>" + str(len(each.caseCount)) + "</td>")
-            each.html.append("<td>" + str(len(each.closedCount)) + "</td>")
-            each.html.append("<td>" + str(len(each.rfcCount)) + "</td>")
-            each.html.append("</tr>")
+            each.html = ''
+            each.html += "<tr>"
+            each.html += ("<td>" + each.name + "</td>")
+            each.html += ("<td>" + str(len(each.caseCount)) + "</td>")
+            each.html += ("<td>" + str(len(each.closedCount)) + "</td>")
+            each.html += ("<td>" + str(len(each.rfcCount)) + "</td>")
+            each.html += "</tr>"
         sorted_list = sorted(self.listedUsers.itervalues(),
                              key=lambda x: len(x.caseCount), reverse=True)
         for each in sorted_list:
-            print len(each.caseCount)
+            self.message += each.html
+
+    def sendEmail(self):
+        messagetable = self.message
+        emailbody = fileToStr("email.html").format(**locals())
+        olMailItem = 0x0
+        obj = win32com.client.Dispatch("Outlook.Application")
+        email = obj.CreateItem(olMailItem)
+        email.Subject = "Escalation Support Activity"
+        email.HTMLBody = emailbody
+        email.to = config.sendMailTo
+        email.Send()
+
 
 if __name__ == "__main__":
     print "==TPS Report v1=="
@@ -192,8 +213,7 @@ if __name__ == "__main__":
     newreport = RFCReport()
     newreport.getTeam()
     newreport.getData()
-    # print newreport.jsonizer(newreport.caseData)
     newreport.checkTeam()
-    # print newreport.reportData
     newreport.sumReport()
     newreport.printReport()
+    newreport.sendEmail()
