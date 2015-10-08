@@ -4,7 +4,7 @@ import json
 import dateparser
 import random
 from frozendict import frozendict
-
+import operator
 
 class TeamMember:
     def __init__(self, name):
@@ -173,13 +173,18 @@ class RFCReport:
         # print the results
         print "Reticulating splines..."
         for each in self.listedUsers.itervalues():
-            print ''
-            print "<tr>"
-            print "<td>" + each.name + "</td>"
-            print "<td>" + str(len(each.caseCount)) + "</td>"
-            print "<td>" + str(len(each.closedCount)) + "</td>"
-            print "<td>" + str(len(each.rfcCount)) + "</td>"
-            print "</tr>"
+            each.html = list()
+            each.html.append('')
+            each.html.append("<tr>")
+            each.html.append("<td>" + each.name + "</td>")
+            each.html.append("<td>" + str(len(each.caseCount)) + "</td>")
+            each.html.append("<td>" + str(len(each.closedCount)) + "</td>")
+            each.html.append("<td>" + str(len(each.rfcCount)) + "</td>")
+            each.html.append("</tr>")
+        sorted_list = sorted(self.listedUsers.itervalues(),
+                             key=lambda x: len(x.caseCount), reverse=True)
+        for each in sorted_list:
+            print len(each.caseCount)
 
 if __name__ == "__main__":
     print "==TPS Report v1=="
