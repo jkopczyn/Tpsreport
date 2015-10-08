@@ -37,6 +37,7 @@ class RFCReport:
         self.reportData = dict()
         self.dupecount = 0
         self.message = ""
+        self.logoimage = config.logo
         print "Login successful."
 
     def jsonizer(self, rawdata):
@@ -197,12 +198,20 @@ class RFCReport:
 
     def sendEmail(self):
         messagetable = self.message
+        logoimage = self.logoimage
+        imageCid = "image001.png@123"
         emailbody = fileToStr("email.html").format(**locals())
         olMailItem = 0x0
         obj = win32com.client.Dispatch("Outlook.Application")
         email = obj.CreateItem(olMailItem)
         email.Subject = "Escalation Support Activity"
         email.HTMLBody = emailbody
+        attachment = email.Attachments.Add(
+                            "servlet.png",
+                            5, 0,
+                            "smarsh logo")
+        attachment.PropertyAccessor.SetProperty(
+            "http://schemas.microsoft.com/mapi/proptag/0x3712001E", imageCid)
         email.to = config.sendMailTo
         email.Send()
 
