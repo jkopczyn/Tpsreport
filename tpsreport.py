@@ -60,7 +60,16 @@ class RFCReport:
 
     def getData(self):
         # initial data set query
-        print "Querying SFDC cases in", config.SFDCdaterange, "..."
+        # note: currently this pulls all cases that are READY FOR CLOSE
+        # or CLOSED and were last modified since the beginning of the target
+        # date range, including days since then but NOT in that range.
+        # The intent of this is that we will capture stuff we sent down on
+        # the last days of the range that the agent had to do some follow-up
+        # on. However as time passes from the range the number of uncaught
+        # duplicates will increase as cases from the specified period get
+        # reopened and reescalated.
+        print "Querying all Support SFDC cases since start of", \
+            config.SFDCdaterange, "..."
         data = self.sf.query_all(
             ''.join((
                 "SELECT CaseNumber, Id, ",
@@ -71,12 +80,15 @@ class RFCReport:
                 "where (Status = 'Closed' or ",
                 "Status = 'Ready For Close') ",
                 "and Type = 'support' ",
-                "and LastModifiedDate = ",
+                "and LastModifiedDate >= ",
                 config.SFDCdaterange
             )))
         self.caseData = json.loads(self.jsonizer(data))
-        print "Got", self.caseData["totalSize"], \
-            "rows in", config.SFDCdaterange
+        lengthset = set()
+        for change in data["records"]:
+            lengthset.add(change["Id"])
+        totalcase = len(lengthset)
+        print "Got", totalcase, "total closed/RFC Support cases."
 
     def genReport(self, data):
         # scrub data to reportable dict form
@@ -136,7 +148,9 @@ class RFCReport:
                     config.SFDCdaterange
                 )))
             self.genReport(json.loads(self.jsonizer(result)))
-        print "Found and removed", self.dupecount, "cases handled twice."
+        print "Found and removed", self.dupecount, "cases handled more than " \
+                                                   "once."
+        print "Credit for duplicates given to latest resolver."
 
     def sumReport(self):
         # generate summaries of data
@@ -159,13 +173,16 @@ class RFCReport:
         # print the results
         print "Reticulating splines..."
         for each in self.listedUsers.itervalues():
-            print each.name
-            print len(each.caseCount), "cases handled"
-            print len(each.closedCount), "Closed cases"
-            print len(each.rfcCount), "cases marked Ready for Close"
-
+            print ''
+            print "<tr>"
+            print "<td>" + each.name + "</td>"
+            print "<td>" + str(len(each.caseCount)) + "</td>"
+            print "<td>" + str(len(each.closedCount)) + "</td>"
+            print "<td>" + str(len(each.rfcCount)) + "</td>"
+            print "</tr>"
 
 if __name__ == "__main__":
+    print "==TPS Report v1=="
     # main execution steps
     newreport = RFCReport()
     newreport.getTeam()

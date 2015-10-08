@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <style>
+        * {
+        margin: 0;
+        padding: 0;
+        font-family: Lato;
+        }
+        body {
+        padding: 0px;
+        background: #bbbbbb;
+        }
+        .flatTable {
+        width: 80%;
+        min-width: 100px;
+        max-width: 500px;
+        border-collapse: collapse;
+        font-weight: bold;
+        color: #6b6b6b;
+        }
+        .flatTable tr {
+        height: 50px;
+        background: #d4d1d5;
+        border-bottom: rgba(0, 0, 0, 0.05) 1px solid;
+        }
+        .flatTable td {
+        text-align: center;
+        box-sizing: border-box;
+        padding-left: 30px;
+        }
+        .flatTable .titleTr {
+        height: 70px;
+        color: #f6f3f7;
+        background: #0062a4;
+        border: 0px solid;
+        }
+        .flatTable .headingTr {
+        height: 30px;
+        background: #48acea;
+        color: #f6f3f7;
+        font-size: 8pt;
+        border: 0px solid;
+        }
+        .display {
+        width: 300px;
+        }
+
+    </style>
+    <title></title>
+</head>
+<body>
+
+
+<table class="flatTable">
+    <tr class="titleTr">
+        <td class="titleTd">TPS Report</td>
+        <td colspan="3"></td>
+    </tr>
+    <tr class="headingTr">
+        <td>Name</td>
+        <td>Total Cases Handled</td>
+        <td>Self Closed</td>
+        <td>Ready For Close</td>
+    </tr>
+
+    $data-goes-here
+
+</table>
+
+<link href='http://fonts.googleapis.com/css?family=Lato:100,300,400,700,900'
+      rel='stylesheet' type='text/css'>
+
+</body>
+</html>
