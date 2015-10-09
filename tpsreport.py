@@ -186,10 +186,10 @@ class RFCReport:
         for each in self.listedUsers.itervalues():
             each.html = ''
             each.html += "<tr>"
-            each.html += ("<td>" + each.name + "</td>")
-            each.html += ("<td>" + str(len(each.caseCount)) + "</td>")
-            each.html += ("<td>" + str(len(each.closedCount)) + "</td>")
-            each.html += ("<td>" + str(len(each.rfcCount)) + "</td>")
+            each.html += ("<td><b>" + each.name + "</td></b>")
+            each.html += ("<td><b>" + str(len(each.caseCount)) + "</td></b>")
+            each.html += ("<td><b>" + str(len(each.closedCount)) + "</td></b>")
+            each.html += ("<td><b>" + str(len(each.rfcCount)) + "</td></b>")
             each.html += "</tr>"
         sorted_list = sorted(self.listedUsers.itervalues(),
                              key=lambda x: len(x.caseCount), reverse=True)
@@ -199,19 +199,14 @@ class RFCReport:
     def sendEmail(self):
         messagetable = self.message
         logoimage = self.logoimage
-        imageCid = "image001.png@123"
+        imageCid = config.logo
+        tablemoz = config.tablemoz
         emailbody = fileToStr("email.html").format(**locals())
         olMailItem = 0x0
         obj = win32com.client.Dispatch("Outlook.Application")
         email = obj.CreateItem(olMailItem)
         email.Subject = "Escalation Support Activity"
         email.HTMLBody = emailbody
-        attachment = email.Attachments.Add(
-                            "servlet.png",
-                            5, 0,
-                            "smarsh logo")
-        attachment.PropertyAccessor.SetProperty(
-            "http://schemas.microsoft.com/mapi/proptag/0x3712001E", imageCid)
         email.to = config.sendMailTo
         email.Send()
 

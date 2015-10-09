@@ -1,78 +1,69 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-
     <style>
-        * {{
-        margin: 0;
-        padding: 0;
-        font-family: Lato;
+        table {{
+        font-size:1px;
+        line-height:0;
+        mso-margin-top-alt:1px;
+        background: #ffffff;
+        color: #ffffff;
         }}
-        body {{
-        padding: 0px;
+        table td {{
+        border-collapse:collapse;
+        mso-table-lspace: 0pt;
+        mso-table-rspace: 0pt;
         }}
         .flatTable {{
-        width: 80%;
-        min-width: 600px;
-        max-width: 600px;
         border-collapse: collapse;
-        font-weight: bold;
-        color: #6b6b6b;
         }}
         .flatTable tr {{
-        height: 50px;
-        background: #d4d1d5;
-        border-bottom: rgba(0, 0, 0, 0.05) 1px solid;
         }}
         .flatTable td {{
         text-align: center;
-        box-sizing: border-box;
-        padding-left: 30px;
+        font-family: Arial;
+        }}
+        .flatTable .titleTd {{
+        text-align: center;
         }}
         .flatTable .titleTr {{
-        height: 70px;
-        font-size: 14pt;
+        text-align: right;
         color: #f6f3f7;
-        background: #0062a4;
-        border: 0px solid;
+        background: #268ac8;
         }}
         .flatTable .headingTr {{
-        height: 30px;
+        text-align: center;
         background: #48acea;
         color: #f6f3f7;
-        font-size: 10pt;
-        border: 0px solid;
         }}
-        .display {{
-        width: 300px;
-        }}
-
     </style>
     <title></title>
 </head>
+
 <body>
 
-
-<table class="flatTable">
+    <table class = flatTable width="600" cellpadding="0" cellspacing="0"
+       border="0"
+       valign="top"
+       align="center">
     <tr class="titleTr">
-        <td class="titleTd">TPS Report</td>
-        <td></td>
-        <td colspan="2"><img src=\"cid:{imageCid}\"></td>
+        <td class="titleTd">{tablemoz}</td>
+        <td class="titleTd" width="100%"><b>TPS Report</b></td>
     </tr>
+    </table>
+    <table class = flatTable width="600" cellpadding="0" cellspacing="0"
+       border="0"
+       valign="top"
+       align="center">
     <tr class="headingTr">
-        <td>Name</td>
-        <td>Total Cases Handled</td>
-        <td>Self Closed</td>
-        <td>Ready For Close</td>
+        <td><b>Name</b></td>
+        <td><b>Total Cases Handled</b></td>
+        <td><b>Self Closed</b></td>
+        <td><b>Ready For Close</b></td>
     </tr>
 
     {messagetable}
 
-</table>
-
-<link href='http://fonts.googleapis.com/css?family=Lato:100,300,400,700,900'
-      rel='stylesheet' type='text/css'>
-
+    </table>
 </body>
 </html>
