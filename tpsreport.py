@@ -40,6 +40,8 @@ class RFCReport:
         self.message = ""
         self.logoimage = config.logo
         self.fulltable = ''
+        self.oldestdate = None
+        self.newestdate = None
         print "Login successful."
 
     def jsonizer(self, rawdata):
@@ -112,6 +114,14 @@ class RFCReport:
                 if line["NewValue"] in ("Ready For Close", "Closed"):
                     caseid = change["ParentId"]
                     changedate = dateparser.parse(change["CreatedDate"])
+                    if self.oldestdate is None:
+                        self.oldestdate = changedate
+                    if self.newestdate is None:
+                        self.newestdate = changedate
+                    if changedate > self.newestdate:
+                        self.newestdate = changedate
+                    if changedate < self.oldestdate:
+                        self.oldestdate = changedate
                     # need to account for more than one t2 on a case
                     if caseid in self.reportData:
                         # chronological order - latest gets it
@@ -197,17 +207,21 @@ class RFCReport:
             casesrem = 400 - casesadj
             rfcs = len(each.rfcCount)
             rfcsadj = int((rfcs / cMax) * 400)
+            if rfcsadj == 400:
+                rfcsadj = 390
             rfcsrem = 400 - rfcsadj
             selfs = len(each.closedCount)
             selfadj = int((selfs / cMax) * 400)
+            if selfadj == 400:
+                selfadj = 390
             selfrem = 400 - selfadj
             bodypart = fileToStr("tablerow.html").format(**locals())
             self.fulltable += bodypart
-            print cases, casesadj, casesrem, rfcs, rfcsadj, rfcsrem, selfs, \
-                selfadj, selfrem
 
     def sendEmail(self):
         fulltable = self.fulltable
+        daterange = ' - '.join((str(self.oldestdate.strftime("%B %d, %Y")),
+                                str(self.newestdate.strftime("%B %d, %Y"))))
         logoimage = self.logoimage
         imageCid = config.logo
         tablemoz = config.tablemoz
