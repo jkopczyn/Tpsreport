@@ -1,3 +1,4 @@
+from __future__ import division
 from simple_salesforce import Salesforce
 import config
 import json
@@ -9,8 +10,8 @@ import win32com.client
 
 def fileToStr(fileName):
     """Return a string containing the contents of the named file."""
-    fin = open(fileName);
-    contents = fin.read();
+    fin = open(fileName)
+    contents = fin.read()
     fin.close()
     return contents
 
@@ -38,6 +39,7 @@ class RFCReport:
         self.dupecount = 0
         self.message = ""
         self.logoimage = config.logo
+        self.fulltable = ''
         print "Login successful."
 
     def jsonizer(self, rawdata):
@@ -136,7 +138,7 @@ class RFCReport:
         print "Found", len(subquery), "unique Escalations-involved cases."
         print "Querying case details..."
         # list of cases is too large for SOQL query, split it
-        sqsplit = len(subquery) / 2
+        sqsplit = int(len(subquery) / 2)
         set1 = set(random.sample(subquery, sqsplit))
         subquery -= set1
         squeries = (set1, subquery)
@@ -183,21 +185,29 @@ class RFCReport:
     def printReport(self):
         # print the results
         print "Reticulating splines..."
-        for each in self.listedUsers.itervalues():
-            each.html = ''
-            each.html += "<tr>"
-            each.html += ("<td><b>" + each.name + "</td></b>")
-            each.html += ("<td><b>" + str(len(each.caseCount)) + "</td></b>")
-            each.html += ("<td><b>" + str(len(each.closedCount)) + "</td></b>")
-            each.html += ("<td><b>" + str(len(each.rfcCount)) + "</td></b>")
-            each.html += "</tr>"
         sorted_list = sorted(self.listedUsers.itervalues(),
                              key=lambda x: len(x.caseCount), reverse=True)
+        cMax = len(sorted_list[0].caseCount)
         for each in sorted_list:
-            self.message += each.html
+            agentname = each.name
+            cases = len(each.caseCount)
+            casesadj = int((cases / cMax) * 400)
+            if casesadj == 400:
+                casesadj = 390
+            casesrem = 400 - casesadj
+            rfcs = len(each.rfcCount)
+            rfcsadj = int((rfcs / cMax) * 400)
+            rfcsrem = 400 - rfcsadj
+            selfs = len(each.closedCount)
+            selfadj = int((selfs / cMax) * 400)
+            selfrem = 400 - selfadj
+            bodypart = fileToStr("tablerow.html").format(**locals())
+            self.fulltable += bodypart
+            print cases, casesadj, casesrem, rfcs, rfcsadj, rfcsrem, selfs, \
+                selfadj, selfrem
 
     def sendEmail(self):
-        messagetable = self.message
+        fulltable = self.fulltable
         logoimage = self.logoimage
         imageCid = config.logo
         tablemoz = config.tablemoz
