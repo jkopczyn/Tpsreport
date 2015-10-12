@@ -1,170 +1,280 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <style type="text/css">
+<head>
+    <style type="text/css">
         table {{
-            font-size:1px;
-            line-height:0;
-            mso-margin-top-alt:1px;
-            background: #ffffff;
-            color: #ffffff;
+        font-size:1px;
+        mso-line-height-alt:0;
+        line-height:0;
+        mso-margin-top-alt:0px;
+        background: #ffffff;
+        color: #ffffff;
         }}
         table td {{
-            border-collapse:collapse;
-            mso-table-lspace: 0pt;
-            mso-table-rspace: 0pt;
+        border-collapse:collapse;
+        mso-table-lspace: 0pt;
+        mso-table-rspace: 0pt;
         }}
-        </style>
-        <title>Escalation Support Activity</title>
-    </head>
-    <body>
-        <table class="flatTable"
-               width="500"
-               cellpadding="0"
-               cellspacing="0"
-               border="0"
-               valign="top"
-               align="left">
-            <tr>
-                <td width="327">
-                    {tablemoz}
-                </td>
-                <td class="titleTd"
-                    width="173"
-                    style="color: #fafafa;
-                    background: #268ac8;
-                    font-size: 13pt;
-                    font-family: Arial;
-                    line-height: 100%;
-                    text-align: right;
-                    padding-right: 10;">
-                    <b><i>Escalation Support Case Handling</i></b>
-                </td>
-            </tr>
-        </table>
-        <table class="chart"
-               width="500"
-               cellpadding="0"
-               cellspacing="0"
-               border="0"
-               valign="top"
-               align="left">
-            <tr>
-                <td style="color: #000000;
-                    background: #aaaaaa;
-                    font-size: 8pt;
-                    font-family: Arial;
-                    line-height: 100%;
-                    text-align: right;
-                    padding-right: 5;
-                    padding-left: 5;"
-                    height="20"
-                    width="500">
-                    <i>Data for {daterange}</i>
-                </td>
-            </tr>
-            {fulltable}
-            </tr>
-        </table>
-        <table class="chart"
-               width="500"
-               cellpadding="0"
-               cellspacing="0"
-               border="0"
-               valign="top"
-               align="left">
-            <tr>
-                <td style="color: #000000;
-                    background: #aaaaaa;
-                    font-size: 8pt;
-                    font-family: Arial;
-                    line-height: 100%;
-                    text-align: right;
-                    padding-right: 5;
-                    padding-left: 5;"
-                    height="20",
-                    width="25%">
-                    <i>&nbsp;</i>
-                </td>
-                <td style="color: #000000;
-                    background: #0e446f;
-                    font-size: 8pt;
-                    font-family: Arial;
-                    line-height: 100%;
-                    text-align: right;
-                    padding-right: 5;
-                    padding-left: 5;"
-                    height="20">
-                    <i>&nbsp;&nbsp;&nbsp;&nbsp;</i>
-                </td>
-                <td style="color: #000000;
-                    background: #aaaaaa;
-                    font-size: 8pt;
-                    font-family: Arial;
-                    line-height: 100%;
-                    text-align: right;
-                    padding-right: 5;
-                    padding-left: 5;"
-                    height="20">
-                    <i>Total Cases</i>
-                </td>
-                <td style="color: #000000;
-                    background: #1c72ae;
-                    font-size: 8pt;
-                    font-family: Arial;
-                    line-height: 100%;
-                    text-align: right;
-                    padding-right: 5;
-                    padding-left: 5;"
-                    height="20">
-                    <i>&nbsp;&nbsp;&nbsp;&nbsp;</i>
-                </td>
-                <td style="color: #000000;
-                    background: #aaaaaa;
-                    font-size: 8pt;
-                    font-family: Arial;
-                    line-height: 100%;
-                    text-align: right;
-                    padding-right: 5;
-                    padding-left: 5;"
-                    height="20">
-                    <i>Ready for Close</i>
-                </td>
-                <td style="color: #000000;
-                    background: #67add8;
-                    font-size: 8pt;
-                    font-family: Arial;
-                    line-height: 100%;
-                    text-align: right;
-                    padding-right: 5;
-                    padding-left: 5;"
-                    height="20">
-                    <i>&nbsp;&nbsp;&nbsp;&nbsp;</i>
-                </td>
-                <td style="color: #000000;
-                    background: #aaaaaa;
-                    font-size: 8pt;
-                    font-family: Arial;
-                    line-height: 100%;
-                    text-align: right;
-                    padding-right: 5;
-                    padding-left: 5;"
-                    height="20">
-                    <i>Self-Closed</i>
-                </td>
-                <td style="color: #000000;
-                    background: #aaaaaa;
-                    font-size: 8pt;
-                    font-family: Arial;
-                    line-height: 100%;
-                    text-align: right;
-                    padding-right: 5;
-                    padding-left: 5;"
-                    height="20",
-                    width="auto">
-                    <i>&nbsp;</i>
-                </td>
-            </tr>
-        </table>
-    </body>
+        .ExternalClass * {{
+        line-height:0%;
+        }}
+    </style>
+    <title>Escalation Support Activity</title>
+</head>
+<body>
+<table width="500"
+       cellpadding="0"
+       cellspacing="0"
+       border="0"
+       valign="top"
+       align="left">
+        <tr>
+            <td>
+                <table class="flatTable"
+                       width="500"
+                       cellpadding="0"
+                       cellspacing="0"
+                       border="0"
+                       valign="top"
+                       align="left">
+                    <tr>
+                        <td width="327">
+                            {tablemoz}
+                        </td>
+                        <td class="titleTd"
+                            width="173"
+                            style="color: #fafafa;
+                            background: #268ac8;
+                            font-size: 13pt;
+                            font-family: Arial;
+                            line-height: 100%;
+                            text-align: right;
+                            padding-right: 10;">
+                            <b><i>Escalation Support Case Handling</i></b>
+                        </td>
+                    </tr>
+                </table>
+                <table class="chart"
+                       width="500"
+                       cellpadding="0"
+                       cellspacing="0"
+                       border="0"
+                       valign="center"
+                       align="left"
+                        style="background: #aaaaaa">
+                    <tr>
+                        <td style="color: #000000;
+                            background: #aaaaaa;
+                            font-size: 8pt;
+                            font-family: Arial;
+                            line-height: 100%;
+                            text-align: right;
+                            padding-right: 5;
+                            padding-left: 5;"
+                            height="30"
+                            width="80">
+                            <i>&nbsp;</i>
+                        </td>
+                        <td>
+                            <table class="chart"
+                                   width="100%"
+                                   cellpadding="0"
+                                   cellspacing="0"
+                                   border="0"
+                                   valign="top"
+                                   align="center">
+                                <tr>
+                                    <td style="color: #000000;
+                                        background: #aaaaaa;
+                                        font-size: 2pt;
+                                        font-family: Arial;
+                                        line-height: 100%;
+                                        text-align: center;
+                                        padding-right: 5;
+                                        padding-left: 5;"
+                                        height="10">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="color: #000000;
+                                        background: #0e446f;
+                                        font-size: 2pt;
+                                        font-family: Arial;
+                                        text-align: center;
+                                        padding-right: 5;
+                                        padding-left: 5;"
+                                        height="10">
+                                        <i>&nbsp;&nbsp;&nbsp;&nbsp;</i>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="color: #000000;
+                                        background: #aaaaaa;
+                                        font-size: 2pt;
+                                        font-family: Arial;
+                                        line-height: 100%;
+                                        text-align: center;
+                                        padding-right: 5;
+                                        padding-left: 5;"
+                                        height="10">
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                        <td style="color: #000000;
+                            background: #aaaaaa;
+                            font-size: 8pt;
+                            font-family: Arial;
+                            line-height: 100%;
+                            text-align: center;
+                            padding-right: 5;
+                            padding-left: 5;"
+                            height="30">
+                            <i>Total Cases</i>
+                        </td>
+                        <td>
+                            <table class="chart"
+                                   width="100%"
+                                   cellpadding="0"
+                                   cellspacing="0"
+                                   border="0"
+                                   valign="top"
+                                   align="center">
+                                <tr>
+                                    <td style="color: #000000;
+                                        background: #aaaaaa;
+                                        font-size: 2pt;
+                                        font-family: Arial;
+                                        line-height: 100%;
+                                        text-align: center;
+                                        padding-right: 5;
+                                        padding-left: 5;"
+                                        height="10">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="color: #000000;
+                                        background: #1f7fc1;
+                                        font-size: 2pt;
+                                        font-family: Arial;
+                                        line-height: 100%;
+                                        text-align: center;
+                                        padding-right: 5;
+                                        padding-left: 5;"
+                                        height="10">
+                                        <i>&nbsp;&nbsp;&nbsp;&nbsp;</i>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="color: #000000;
+                                        background: #aaaaaa;
+                                        font-size: 2pt;
+                                        font-family: Arial;
+                                        line-height: 100%;
+                                        text-align: center;
+                                        padding-right: 5;
+                                        padding-left: 5;"
+                                        height="10">
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                        <td style="color: #000000;
+                            background: #aaaaaa;
+                            font-size: 8pt;
+                            font-family: Arial;
+                            line-height: 100%;
+                            text-align: center;
+                            padding-right: 5;
+                            padding-left: 5;"
+                            height="30">
+                            <i>Ready for Close</i>
+                        </td>
+                        <td>
+                            <table class="chart"
+                                   width="100%"
+                                   cellpadding="0"
+                                   cellspacing="0"
+                                   border="0"
+                                   valign="top"
+                                   align="center">
+                                <tr>
+                                    <td style="color: #000000;
+                                        background: #aaaaaa;
+                                        font-size: 2pt;
+                                        font-family: Arial;
+                                        line-height: 100%;
+                                        text-align: center;
+                                        padding-right: 5;
+                                        padding-left: 5;"
+                                        height="10">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="color: #000000;
+                                        background: #67add8;
+                                        font-size: 2pt;
+                                        font-family: Arial;
+                                        line-height: 100%;
+                                        text-align: center;
+                                        padding-right: 5;
+                                        padding-left: 5;"
+                                        height="10">
+                                        <i>&nbsp;&nbsp;&nbsp;&nbsp;</i>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="color: #000000;
+                                        background: #aaaaaa;
+                                        font-size: 2pt;
+                                        font-family: Arial;
+                                        line-height: 100%;
+                                        text-align: center;
+                                        padding-right: 5;
+                                        padding-left: 5;"
+                                        height="10">
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                        <td style="color: #000000;
+                            background: #aaaaaa;
+                            font-size: 8pt;
+                            font-family: Arial;
+                            line-height: 100%;
+                            text-align: center;
+                            padding-right: 5;
+                            padding-left: 5;"
+                            height="30">
+                            <i>Self-Closed</i>
+                        </td>
+                    </tr>
+                </table>
+                {fulltable}
+                <table class="chart"
+                       width="500"
+                       cellpadding="0"
+                       cellspacing="0"
+                       border="0"
+                       valign="top"
+                       align="left">
+                    <tr>
+                        <td style="color: #000000;
+                            background: #aaaaaa;
+                            font-size: 8pt;
+                            font-family: Arial;
+                            line-height: 100%;
+                            text-align: right;
+                            padding-right: 5;
+                            padding-left: 5;"
+                            height="20"
+                            width="500">
+                            <i>Data for {daterange}</i>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
 </html>
