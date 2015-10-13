@@ -16,6 +16,27 @@ def fileToStr(fileName):
     return contents
 
 
+def jsonizer(rawdata):
+    """pretty prints SOQL dumps.
+    Run through this and then json.loads() to smooth data."""
+    jsondata = json.dumps(
+        rawdata,
+        sort_keys=True,
+        indent=4,
+        separators=(',', ': ')
+    )
+    return jsondata
+
+
+def prettyquery(query):
+    sf = Salesforce(username=config.username,
+                    password=config.password,
+                    security_token=config.security_token)
+    raw = sf.query_all(query)
+    pretty = jsonizer(raw)
+    print pretty
+
+
 class TeamMember:
     def __init__(self, name):
         self.name = name
@@ -42,21 +63,11 @@ class RFCReport:
         self.fulltable = ''
         self.oldestdate = None
         self.newestdate = None
+        self.TDData = None
         print "Login successful."
 
-    def jsonizer(self, rawdata):
-        # pretty prints SOQL dumps.
-        # Run through this and then json.loads() to smooth data.
-        jsondata = json.dumps(
-            rawdata,
-            sort_keys=True,
-            indent=4,
-            separators=(',', ': ')
-        )
-        return jsondata
-
     def getTeam(self):
-        # figure out who we're interested in based on SFDC role
+        """figure out who we're interested in based on SFDC role"""
         print "Querying Escalations team members..."
         data = self.sf.query(
             ''.join((
@@ -65,48 +76,38 @@ class RFCReport:
                 "where UserRoleId = '",
                 config.reportrole, "'"
             )))
-        team = json.loads(self.jsonizer(data))
+        team = json.loads(jsonizer(data))
         for member in team["records"]:
             rname = self.sf.User.get(member["Id"])
-            jname = json.loads(self.jsonizer(rname))
+            jname = json.loads(jsonizer(rname))
             name = jname["Name"]
             self.closerTeam[member["Id"]] = name
         print "Found", len(self.closerTeam), "team members."
 
-    def getData(self):
-        # initial data set query
-        # note: currently this pulls all cases that are READY FOR CLOSE
-        # or CLOSED and were last modified since the beginning of the target
-        # date range, including days since then but NOT in that range.
-        # The intent of this is that we will capture stuff we sent down on
-        # the last days of the range that the agent had to do some follow-up
-        # on. However as time passes from the range the number of uncaught
-        # duplicates will increase as cases from the specified period get
-        # reopened and reescalated.
-        print "Querying all Support SFDC cases since start of", \
-            config.SFDCdaterange, "..."
-        data = self.sf.query_all(
-            ''.join((
-                "SELECT CaseNumber, Id, ",
-                "(SELECT Field, NewValue ",
-                "from Histories ",
-                "WHERE Field = 'Owner') ",
-                "from Case ",
-                "where (Status = 'Closed' or ",
-                "Status = 'Ready For Close') ",
-                "and Type = 'support' ",
-                "and LastModifiedDate >= ",
-                config.SFDCdaterange
-            )))
-        self.caseData = json.loads(self.jsonizer(data))
+    def getData(self, initString, query, checkFields, exitString):
+        """ Generalized case data querying function.
+        Returns nested non-ordered dict.
+        Query should be a SOQL query.
+        checkFields should be an ordered list of fields to drill down
+        through to reach a case ID or case number within the query used.
+        For example, our teardownQuery returns Parent.CaseNumber,
+        which is represented in the jsonized output as a value within the
+        Parent dict within the Record dict representing each change. This
+        means that we need to drill "records" > "Parent" > "CaseNumber".
+        The "records" part is assumed in this func, so the correct
+        checkFields will be ["Parent", "CaseNumber"]"""
+        print initString
+        data = self.sf.query_all(query)
+        output = json.loads(jsonizer(data))
         lengthset = set()
-        for change in data["records"]:
-            lengthset.add(change["Id"])
+        for change in output["records"]:
+            lengthset.add(reduce(dict.__getitem__, checkFields, change))
         totalcase = len(lengthset)
-        print "Got", totalcase, "total closed/RFC Support cases."
+        print "Got", totalcase, exitString
+        return output
 
     def genReport(self, data):
-        # scrub data to reportable dict form
+        """deduplicate gathered case data"""
         for change in data["records"]:
             if change["InsertedById"] not in self.closerTeam:
                 continue
@@ -135,7 +136,7 @@ class RFCReport:
                         Date=changedate)
 
     def checkTeam(self):
-        # look for cases our team was involved in
+        """look for cases our team was involved in"""
         subquery = set()
         for record in self.caseData["records"]:
             if record["Histories"]:
@@ -170,13 +171,13 @@ class RFCReport:
                     " and CreatedDate = ",
                     config.SFDCdaterange
                 )))
-            self.genReport(json.loads(self.jsonizer(result)))
+            self.genReport(json.loads(jsonizer(result)))
         print "Found and removed", self.dupecount, "cases handled more than " \
                                                    "once."
         print "Credit for duplicates given to latest resolver."
 
     def sumReport(self):
-        # generate summaries of data
+        """generate summaries of gathered data"""
         print "Generating summaries..."
         for case in self.reportData.itervalues():
             name = case["Name"]
@@ -193,7 +194,7 @@ class RFCReport:
                 nameobj.rfcCount.discard(case)
 
     def printReport(self):
-        # print the results
+        """calculate offsets for HTML table rows and generate full table"""
         print "Reticulating splines..."
         sorted_list = sorted(self.listedUsers.itervalues(),
                              key=lambda x: len(x.caseCount), reverse=True)
@@ -235,13 +236,62 @@ class RFCReport:
         email.Send()
 
 
+# note: currently this pulls all cases that are READY FOR CLOSE
+# or CLOSED and were last modified since the beginning of the target
+# date range, including days since then but NOT in that range.
+# The intent of this is that we will capture stuff we sent down on
+# the last days of the range that the agent had to do some follow-up
+# on. However as time passes from the range the number of uncaught
+# duplicates will increase as cases from the specified period get
+# reopened and reescalated.
+supportQuery = ''.join((
+    "SELECT CaseNumber, Id, ",
+    "(SELECT Field, NewValue ",
+    "from Histories ",
+    "WHERE Field = 'Owner') ",
+    "from Case ",
+    "where (Status = 'Closed' or ",
+    "Status = 'Ready For Close') ",
+    "and Type = 'support' ",
+    "and LastModifiedDate >= ",
+    config.SFDCdaterange
+))
+
+# returns all teardown cases, ever, as defined by
+# "has a cancellation effective date".
+teardownQuery = ''.join((
+    "SELECT InsertedById, ",
+    "CreatedDate, ",
+    "Parent.CaseNumber, ",
+    "(SELECT NewValue, FieldName ",
+    "FROM FeedTrackedChanges) ",
+    "FROM CaseFeed ",
+    "WHERE Parent.Cancel_Effective_Date__c !=Null"
+))
+
+supportInit = ' '.join((
+    "Querying all Support SFDC cases since start of",
+    config.SFDCdaterange, "..."
+))
+
+
 if __name__ == "__main__":
     print "==TPS Report v1=="
     # main execution steps
     newreport = RFCReport()
     newreport.getTeam()
-    newreport.getData()
-    newreport.checkTeam()
-    newreport.sumReport()
-    newreport.printReport()
-    newreport.sendEmail()
+    newreport.caseData = newreport.getData(
+        initString=supportInit,
+        query=supportQuery,
+        checkFields=["Id"],
+        exitString="total closed/RFC Support cases")
+    newreport.TDData = newreport.getData(
+        initString="Querying all Teardown cases...",
+        query=teardownQuery,
+        checkFields=["Parent", "CaseNumber"],
+        exitString="total Teardown cases"
+    )
+    # newreport.checkTeam()
+    # newreport.sumReport()
+    # newreport.printReport()
+    # newreport.sendEmail()
