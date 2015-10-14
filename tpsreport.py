@@ -146,14 +146,17 @@ class RFCReport:
                              reverse=True)
         cMax = len(sorted_list[0].caseCount)
         for each in sorted_list:
-            formatDict = {"agentname": each.name}
+            formatDict = {"agentname": each.name,
+                          "cases": len(each.caseCount)}
             for key in each.counts.iterkeys():
                 formatDict[key] = len(each.counts[key])
-                adj = int(((formatDict[key]) / cMax) * 400)
+                adj = int(((formatDict[key]) / min((formatDict["cases"]) *
+                           400, cMax / 400)))
                 adj = adj if adj < 400 else 390
                 formatDict[(key + "adj")] = adj
                 formatDict[(key + "rem")] = 400 - formatDict[(key + "adj")]
-            formatDict["selfsadj"] -= 10
+                formatDict[key] = "" if formatDict[key] == 0 else \
+                    formatDict[key]
             bodypart = fileToStr("tablerowtest.html").format(**formatDict)
             self.fulltable += bodypart
 
