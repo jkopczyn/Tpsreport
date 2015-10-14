@@ -37,6 +37,10 @@ def prettyquery(query):
     print pretty
 
 
+def nestedGet(checkFields, sourceDict):
+    return reduce(dict.__getitem__, checkFields, sourceDict)
+
+
 class TeamMember:
     def __init__(self, name):
         self.name = name
@@ -64,6 +68,7 @@ class RFCReport:
         self.oldestdate = None
         self.newestdate = None
         self.TDData = None
+        self.teamIDs = set()
         print "Login successful."
 
     def getTeam(self):
@@ -78,6 +83,7 @@ class RFCReport:
             )))
         team = json.loads(jsonizer(data))
         for member in team["records"]:
+            self.teamIDs.add(member["Id"])
             rname = self.sf.User.get(member["Id"])
             jname = json.loads(jsonizer(rname))
             name = jname["Name"]
@@ -86,34 +92,38 @@ class RFCReport:
 
     def getData(self, initString, query, checkFields, exitString):
         """ Generalized case data querying function.
-        Returns nested non-ordered dict.
+        Returns nested dict/list structure corresponding to SOQL output.
         Query should be a SOQL query.
         checkFields should be an ordered list of fields to drill down
-        through to reach a case ID or case number within the query used.
+        through to reach a unique case ID or case number within the query used.
         For example, our teardownQuery returns Parent.CaseNumber,
         which is represented in the jsonized output as a value within the
         Parent dict within the Record dict representing each change. This
-        means that we need to drill "records" > "Parent" > "CaseNumber".
-        The "records" part is assumed in this func, so the correct
-        checkFields will be ["Parent", "CaseNumber"]"""
+        means that we need to drill "records" > (list, must be iterated) >
+        "Parent" > "CaseNumber".
+        The "records" part and the unindexed list following it are assumed
+        and handled automatically in this func, so the correct
+        checkFields will be ["Parent", "CaseNumber"]."""
         print initString
         data = self.sf.query_all(query)
         output = json.loads(jsonizer(data))
         lengthset = set()
         for change in output["records"]:
-            lengthset.add(reduce(dict.__getitem__, checkFields, change))
+            lengthset.add(nestedGet(checkFields, change))
         totalcase = len(lengthset)
         print "Got", totalcase, exitString
         return output
 
     def genReport(self, data):
         """deduplicate gathered case data"""
+        dupecount = 0
+        output = dict()
         for change in data["records"]:
             if change["InsertedById"] not in self.closerTeam:
                 continue
             for line in change["FeedTrackedChanges"]["records"]:
                 if line["NewValue"] in ("Ready For Close", "Closed"):
-                    caseid = change["ParentId"]
+                    caseid = nestedGet(["Parent", "CaseNumber"], change)
                     changedate = dateparser.parse(change["CreatedDate"])
                     if self.oldestdate is None:
                         self.oldestdate = changedate
@@ -124,57 +134,20 @@ class RFCReport:
                     if changedate < self.oldestdate:
                         self.oldestdate = changedate
                     # need to account for more than one t2 on a case
-                    if caseid in self.reportData:
+                    if caseid in output:
                         # chronological order - latest gets it
-                        if self.reportData[caseid]["Date"] > changedate:
-                            self.dupecount += 1
+                        if output[caseid]["Date"] > changedate:
+                            dupecount += 1
                             continue
-                    self.reportData[caseid] = frozendict(
+                    output[caseid] = frozendict(
                         Name=self.closerTeam[change["InsertedById"]],
                         Case=caseid,
                         Status=line["NewValue"],
                         Date=changedate)
-
-    def checkTeam(self):
-        """look for cases our team was involved in"""
-        subquery = set()
-        for record in self.caseData["records"]:
-            if record["Histories"]:
-                for x in record["Histories"]["records"]:
-                    if x["NewValue"] in self.closerTeam:
-                        name = self.closerTeam[x["NewValue"]]
-                        casenum = record["CaseNumber"]
-                        caseid = record["Id"]
-                        subquery.add(caseid)
-        print "Found", len(subquery), "unique Escalations-involved cases."
-        print "Querying case details..."
-        # list of cases is too large for SOQL query, split it
-        sqsplit = int(len(subquery) / 2)
-        set1 = set(random.sample(subquery, sqsplit))
-        subquery -= set1
-        squeries = (set1, subquery)
-        # run each split query, scrub each into reports
-        print "Filtering and de-duplicating..."
-        for each in squeries:
-            newsquery = "','".join(each)
-            newsquery = "('" + newsquery + "')"
-            # structure query that pulls all TrackedChanges for case IDs
-            result = self.sf.query_all(
-                ''.join((
-                    "SELECT InsertedById, CreatedDate, "
-                    "ParentID, ",
-                    "(SELECT NewValue, FieldName ",
-                    "from FeedTrackedChanges) ",
-                    "from CaseFeed ",
-                    "where ParentId IN ",
-                    newsquery,
-                    " and CreatedDate = ",
-                    config.SFDCdaterange
-                )))
-            self.genReport(json.loads(jsonizer(result)))
-        print "Found and removed", self.dupecount, "cases handled more than " \
-                                                   "once."
+        print "Found and removed", dupecount, "cases handled more than " \
+                                              "once."
         print "Credit for duplicates given to latest resolver."
+        return output
 
     def sumReport(self):
         """generate summaries of gathered data"""
@@ -235,63 +208,38 @@ class RFCReport:
         email.to = config.sendMailTo
         email.Send()
 
-
-# note: currently this pulls all cases that are READY FOR CLOSE
-# or CLOSED and were last modified since the beginning of the target
-# date range, including days since then but NOT in that range.
-# The intent of this is that we will capture stuff we sent down on
-# the last days of the range that the agent had to do some follow-up
-# on. However as time passes from the range the number of uncaught
-# duplicates will increase as cases from the specified period get
-# reopened and reescalated.
-supportQuery = ''.join((
-    "SELECT CaseNumber, Id, ",
-    "(SELECT Field, NewValue ",
-    "from Histories ",
-    "WHERE Field = 'Owner') ",
-    "from Case ",
-    "where (Status = 'Closed' or ",
-    "Status = 'Ready For Close') ",
-    "and Type = 'support' ",
-    "and LastModifiedDate >= ",
-    config.SFDCdaterange
-))
-
-# returns all teardown cases, ever, as defined by
-# "has a cancellation effective date".
-teardownQuery = ''.join((
-    "SELECT InsertedById, ",
-    "CreatedDate, ",
-    "Parent.CaseNumber, ",
-    "(SELECT NewValue, FieldName ",
-    "FROM FeedTrackedChanges) ",
-    "FROM CaseFeed ",
-    "WHERE Parent.Cancel_Effective_Date__c !=Null"
-))
-
 supportInit = ' '.join((
     "Querying all Support SFDC cases since start of",
     config.SFDCdaterange, "..."
 ))
-
 
 if __name__ == "__main__":
     print "==TPS Report v1=="
     # main execution steps
     newreport = RFCReport()
     newreport.getTeam()
+    supportQuery = ''.join((
+        "SELECT CreatedBy.Name, ",
+        "CreatedDate, ",
+        "InsertedById, ",
+        "Parent.CaseNumber, ",
+        "ParentId, ",
+        "(SELECT NewValue, FieldName ",
+        "from FeedTrackedChanges) ",
+        "from CaseFeed ",
+        "WHERE (Parent.LastModifiedDate >= ",
+        config.SFDCdaterange,
+        " AND CreatedBy.UserRoleId = '",
+        config.reportrole, "'",
+        " AND CreatedDate = ",
+        config.SFDCdaterange, ")"
+    ))
     newreport.caseData = newreport.getData(
         initString=supportInit,
         query=supportQuery,
-        checkFields=["Id"],
-        exitString="total closed/RFC Support cases")
-    newreport.TDData = newreport.getData(
-        initString="Querying all Teardown cases...",
-        query=teardownQuery,
         checkFields=["Parent", "CaseNumber"],
-        exitString="total Teardown cases"
-    )
-    # newreport.checkTeam()
-    # newreport.sumReport()
-    # newreport.printReport()
-    # newreport.sendEmail()
+        exitString="total closed/RFC Support cases")
+    newreport.reportData = newreport.genReport(newreport.caseData)
+    newreport.sumReport()
+    newreport.printReport()
+    newreport.sendEmail()
