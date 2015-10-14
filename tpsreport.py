@@ -157,8 +157,8 @@ class RFCReport:
             self.fulltable += bodypart
 
     def sendEmail(self):
-        dates = [x["Date"] for x in self.reportData.itervalues()]
-        daterange = [x.strftime("%B %d, %Y") for x in (min(dates), max(dates))]
+        d = [x["Date"] for x in self.reportData.itervalues()]
+        dates = ' - '.join([x.strftime("%B %d, %Y") for x in (min(d), max(d))])
         print "Amassing reindeer flotilla..."
         fulltable = self.fulltable
         tablemoz = config.tablemoz
