@@ -38,19 +38,30 @@ def prettyQuery(query):
 
 
 def nestedGet(checkFields, sourceDict):
-    """deep dives into a nested dict. checkFields is the hierarchy to
-    traverse."""
+    """deep dives into a nested dict. checkFields should be an ordered list
+    of fields to drill down through to reach a unique case ID or case number
+    within the query used. For example, our case query returns
+    Parent.CaseNumber, which is represented in the jsonized output as a value
+    within the Parent dict within the Record dict representing each change.
+    This means that we need to drill "records" > (list, must be iterated) >
+    "Parent" > "CaseNumber". This method cannot traverse lists/unindexed
+    literals, so I've built handing "for x in dict["records"] into the
+    various functions that use it. Therefore, what we want for our
+    checkFields is ["Parent", "CaseNumber"]."""
     return reduce(dict.__getitem__, checkFields, sourceDict)
 
 
 class TeamMember:
     """convenience object"""
+
     def __init__(self, name):
         self.name = name
         self.caseCount = set()
         self.rfcCount = set()
         self.closedCount = set()
         self.tdCount = set()
+        self.counts = dict(tds=self.tdCount, rfcs=self.rfcCount,
+                           selfs=self.closedCount, cases=self.caseCount)
 
 
 class RFCReport:
@@ -74,17 +85,7 @@ class RFCReport:
     def getData(self, initString, query, checkFields, exitString):
         """ Generalized case data querying function.
         Returns nested dict/list structure corresponding to SOQL output.
-        Query should be a SOQL query.
-        checkFields should be an ordered list of fields to drill down
-        through to reach a unique case ID or case number within the query used.
-        For example, our case query returns Parent.CaseNumber,
-        which is represented in the jsonized output as a value within the
-        Parent dict within the Record dict representing each change. This
-        means that we need to drill "records" > (list, must be iterated) >
-        "Parent" > "CaseNumber".
-        The "records" part and the unindexed list following it are assumed
-        and handled automatically in this func, so the correct
-        checkFields will be ["Parent", "CaseNumber"]."""
+        Query should be a SOQL query. See nestedGet for checkFields format."""
         print initString
         data = self.sf.query_all(query)
         output = json.loads(jsonizer(data))
@@ -161,31 +162,18 @@ class RFCReport:
                              key=lambda x: len(x.caseCount), reverse=True)
         cMax = len(sorted_list[0].caseCount)
         for each in sorted_list:
-            agentname = each.name
-            cases = len(each.caseCount)
-            casesadj = int((cases / cMax) * 400)
-            if casesadj == 400:
-                casesadj = 390
-            casesrem = 400 - casesadj
-            rfcs = len(each.rfcCount)
-            rfcsadj = int((rfcs / cMax) * 400)
-            if rfcsadj == 400:
-                rfcsadj = 390
-            rfcsrem = 400 - rfcsadj
-            selfs = len(each.closedCount)
-            selfadj = int((selfs / cMax) * 400)
-            if selfadj == 400:
-                selfadj = 390
-            selfrem = 400 - selfadj
-            tds = len(each.tdCount)
-            tdsadj = int((tds / cMax) * 400)
-            if tdsadj == 400:
-                tdsadj = 390
-            tdsrem = 400 - tdsadj
-            bodypart = fileToStr("tablerow.html").format(**locals())
+            formatDict = {"agentname": each.name}
+            for key in each.counts.iterkeys():
+                formatDict[key] = len(each.counts[key])
+                adj = int((formatDict[key]) / cMax * 400)
+                adj = adj if adj < 400 else 390
+                formatDict[(key + "adj")] = adj
+                formatDict[(key + "rem")] = 400 - formatDict[key]
+            bodypart = fileToStr("tablerow.html").format(**formatDict)
             self.fulltable += bodypart
 
     def sendEmail(self):
+        print "Amassing reindeer flotilla..."
         fulltable = self.fulltable
         daterange = ' - '.join((str(self.oldestdate.strftime("%B %d, %Y")),
                                 str(self.newestdate.strftime("%B %d, %Y"))))
@@ -198,6 +186,7 @@ class RFCReport:
         email.HTMLBody = emailbody
         email.to = config.sendMailTo
         email.Send()
+
 
 supportInit = ''.join((
     "Querying all Support SFDC cases since start of ",
