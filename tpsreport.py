@@ -71,15 +71,10 @@ class RFCReport:
         self.sf = Salesforce(username=config.username,
                              password=config.password,
                              security_token=config.security_token)
-        self.closerTeam = dict()
         self.listedUsers = dict()
         self.caseData = None
-        self.filteredCases = None
         self.reportData = dict()
-        self.message = ""
         self.fulltable = ''
-        self.oldestdate = None
-        self.newestdate = None
         print "Login successful."
 
     def getData(self, initString, query, checkFields, exitString):
@@ -105,14 +100,6 @@ class RFCReport:
                 if line["NewValue"] in ("Ready For Close", "Closed"):
                     caseid = nestedGet(["Parent", "CaseNumber"], change)
                     changedate = dateparser.parse(change["CreatedDate"])
-                    if self.oldestdate is None:
-                        self.oldestdate = changedate
-                    if self.newestdate is None:
-                        self.newestdate = changedate
-                    if changedate > self.newestdate:
-                        self.newestdate = changedate
-                    if changedate < self.oldestdate:
-                        self.oldestdate = changedate
                     # need to account for more than one t2 on a case
                     if caseid in output:
                         # chronological order - latest gets it
@@ -135,14 +122,15 @@ class RFCReport:
         print "Credit for duplicates given to latest resolver."
         return output
 
-    def sumReport(self):
-        """generate summaries of gathered data"""
+    def printReport(self):
+        """calculate offsets for HTML table rows and generate full table"""
+        print "Reticulating splines..."
+        listedUsers = [TeamMember(y) for y in
+                       set([x["Name"] for x in self.reportData.itervalues()])]
         print "Generating summaries..."
         for case in self.reportData.itervalues():
             name = case["Name"]
-            if name not in self.listedUsers:
-                self.listedUsers[name] = TeamMember(name)
-            nameobj = self.listedUsers[name]
+            nameobj = (filter(lambda x: x.name == name, listedUsers))[0]
             nameobj.caseCount.add(case)
             if case["Status"] == "Ready For Close":
                 nameobj.closedCount.discard(case)
@@ -154,12 +142,8 @@ class RFCReport:
                 nameobj.tdCount.add(case)
                 nameobj.rfcCount.discard(case)
                 nameobj.closedCount.discard(case)
-
-    def printReport(self):
-        """calculate offsets for HTML table rows and generate full table"""
-        print "Reticulating splines..."
-        sorted_list = sorted(self.listedUsers.itervalues(),
-                             key=lambda x: len(x.caseCount), reverse=True)
+        sorted_list = sorted(listedUsers, key=lambda x: len(x.caseCount),
+                             reverse=True)
         cMax = len(sorted_list[0].caseCount)
         for each in sorted_list:
             formatDict = {"agentname": each.name}
@@ -173,10 +157,12 @@ class RFCReport:
             self.fulltable += bodypart
 
     def sendEmail(self):
+        dates = [x["Date"] for x in self.reportData.itervalues()]
+        oldestdate, newestdate = min(dates), max(dates)
         print "Amassing reindeer flotilla..."
         fulltable = self.fulltable
-        daterange = ' - '.join((str(self.oldestdate.strftime("%B %d, %Y")),
-                                str(self.newestdate.strftime("%B %d, %Y"))))
+        daterange = ' - '.join((str(oldestdate.strftime("%B %d, %Y")),
+                                str(newestdate.strftime("%B %d, %Y"))))
         tablemoz = config.tablemoz
         emailbody = fileToStr("email.html").format(**locals())
         olMailItem = 0x0
@@ -218,6 +204,5 @@ if __name__ == "__main__":
         checkFields=["Parent", "CaseNumber"],
         exitString="total closed/RFC Support cases")
     newreport.reportData = newreport.genReport(newreport.caseData)
-    newreport.sumReport()
     newreport.printReport()
     newreport.sendEmail()
