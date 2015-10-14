@@ -129,7 +129,7 @@ class RFCReport:
         print "Generating summaries..."
         for case in self.reportData.itervalues():
             name = case["Name"]
-            nameobj = (filter(lambda x: x.name == name, listedUsers))[0]
+            nameobj = (filter(lambda z: z.name == name, listedUsers))[0]
             nameobj.caseCount.add(case)
             if case["Status"] == "Ready For Close":
                 nameobj.closedCount.discard(case)
@@ -141,7 +141,7 @@ class RFCReport:
                 nameobj.tdCount.add(case)
                 nameobj.rfcCount.discard(case)
                 nameobj.closedCount.discard(case)
-        sorted_list = sorted(listedUsers, key=lambda x: len(x.caseCount),
+        sorted_list = sorted(listedUsers, key=lambda q: len(q.caseCount),
                              reverse=True)
         cMax = len(sorted_list[0].caseCount)
         for each in sorted_list:
