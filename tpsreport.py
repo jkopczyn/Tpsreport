@@ -149,10 +149,10 @@ class RFCReport:
             formatDict = {"agentname": each.name}
             for key in each.counts.iterkeys():
                 formatDict[key] = len(each.counts[key])
-                adj = int((formatDict[key]) / cMax * 400)
+                adj = int(((formatDict[key]) / cMax) * 400)
                 adj = adj if adj < 400 else 390
                 formatDict[(key + "adj")] = adj
-                formatDict[(key + "rem")] = 400 - formatDict[key]
+                formatDict[(key + "rem")] = 400 - formatDict[(key + "adj")]
             bodypart = fileToStr("tablerow.html").format(**formatDict)
             self.fulltable += bodypart
 
