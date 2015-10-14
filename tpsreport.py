@@ -153,7 +153,8 @@ class RFCReport:
                 adj = adj if adj < 400 else 390
                 formatDict[(key + "adj")] = adj
                 formatDict[(key + "rem")] = 400 - formatDict[(key + "adj")]
-            bodypart = fileToStr("tablerow.html").format(**formatDict)
+            formatDict["selfsadj"] -= 10
+            bodypart = fileToStr("tablerowtest.html").format(**formatDict)
             self.fulltable += bodypart
 
     def sendEmail(self):
