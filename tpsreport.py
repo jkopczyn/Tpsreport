@@ -3,7 +3,6 @@ from simple_salesforce import Salesforce
 import config
 import json
 import dateparser
-import random
 from frozendict import frozendict
 import win32com.client
 
@@ -28,7 +27,8 @@ def jsonizer(rawdata):
     return jsondata
 
 
-def prettyquery(query):
+def prettyQuery(query):
+    """prints JSON of SOQL query. For console use."""
     sf = Salesforce(username=config.username,
                     password=config.password,
                     security_token=config.security_token)
@@ -38,15 +38,19 @@ def prettyquery(query):
 
 
 def nestedGet(checkFields, sourceDict):
+    """deep dives into a nested dict. checkFields is the hierarchy to
+    traverse."""
     return reduce(dict.__getitem__, checkFields, sourceDict)
 
 
 class TeamMember:
+    """convenience object"""
     def __init__(self, name):
         self.name = name
         self.caseCount = set()
         self.rfcCount = set()
         self.closedCount = set()
+        self.tdCount = set()
 
 
 class RFCReport:
@@ -61,34 +65,11 @@ class RFCReport:
         self.caseData = None
         self.filteredCases = None
         self.reportData = dict()
-        self.dupecount = 0
         self.message = ""
-        self.logoimage = config.logo
         self.fulltable = ''
         self.oldestdate = None
         self.newestdate = None
-        self.TDData = None
-        self.teamIDs = set()
         print "Login successful."
-
-    def getTeam(self):
-        """figure out who we're interested in based on SFDC role"""
-        print "Querying Escalations team members..."
-        data = self.sf.query(
-            ''.join((
-                "SELECT Id ",
-                "from User ",
-                "where UserRoleId = '",
-                config.reportrole, "'"
-            )))
-        team = json.loads(jsonizer(data))
-        for member in team["records"]:
-            self.teamIDs.add(member["Id"])
-            rname = self.sf.User.get(member["Id"])
-            jname = json.loads(jsonizer(rname))
-            name = jname["Name"]
-            self.closerTeam[member["Id"]] = name
-        print "Found", len(self.closerTeam), "team members."
 
     def getData(self, initString, query, checkFields, exitString):
         """ Generalized case data querying function.
@@ -96,7 +77,7 @@ class RFCReport:
         Query should be a SOQL query.
         checkFields should be an ordered list of fields to drill down
         through to reach a unique case ID or case number within the query used.
-        For example, our teardownQuery returns Parent.CaseNumber,
+        For example, our case query returns Parent.CaseNumber,
         which is represented in the jsonized output as a value within the
         Parent dict within the Record dict representing each change. This
         means that we need to drill "records" > (list, must be iterated) >
@@ -119,8 +100,6 @@ class RFCReport:
         dupecount = 0
         output = dict()
         for change in data["records"]:
-            if change["InsertedById"] not in self.closerTeam:
-                continue
             for line in change["FeedTrackedChanges"]["records"]:
                 if line["NewValue"] in ("Ready For Close", "Closed"):
                     caseid = nestedGet(["Parent", "CaseNumber"], change)
@@ -139,10 +118,16 @@ class RFCReport:
                         if output[caseid]["Date"] > changedate:
                             dupecount += 1
                             continue
+                    if nestedGet(["Parent", "Cancel_Effective_Date__c"],
+                                 change) is not None:
+                        teardown = True
+                    else:
+                        teardown = False
                     output[caseid] = frozendict(
-                        Name=self.closerTeam[change["InsertedById"]],
+                        Name=nestedGet(["CreatedBy", "Name"], change),
                         Case=caseid,
                         Status=line["NewValue"],
+                        Teardown=teardown,
                         Date=changedate)
         print "Found and removed", dupecount, "cases handled more than " \
                                               "once."
@@ -154,7 +139,6 @@ class RFCReport:
         print "Generating summaries..."
         for case in self.reportData.itervalues():
             name = case["Name"]
-            casenum = case["Case"]
             if name not in self.listedUsers:
                 self.listedUsers[name] = TeamMember(name)
             nameobj = self.listedUsers[name]
@@ -165,6 +149,10 @@ class RFCReport:
             if case["Status"] == "Closed":
                 nameobj.closedCount.add(case)
                 nameobj.rfcCount.discard(case)
+            if case["Teardown"]:
+                nameobj.tdCount.add(case)
+                nameobj.rfcCount.discard(case)
+                nameobj.closedCount.discard(case)
 
     def printReport(self):
         """calculate offsets for HTML table rows and generate full table"""
@@ -189,6 +177,11 @@ class RFCReport:
             if selfadj == 400:
                 selfadj = 390
             selfrem = 400 - selfadj
+            tds = len(each.tdCount)
+            tdsadj = int((tds / cMax) * 400)
+            if tdsadj == 400:
+                tdsadj = 390
+            tdsrem = 400 - tdsadj
             bodypart = fileToStr("tablerow.html").format(**locals())
             self.fulltable += bodypart
 
@@ -196,8 +189,6 @@ class RFCReport:
         fulltable = self.fulltable
         daterange = ' - '.join((str(self.oldestdate.strftime("%B %d, %Y")),
                                 str(self.newestdate.strftime("%B %d, %Y"))))
-        logoimage = self.logoimage
-        imageCid = config.logo
         tablemoz = config.tablemoz
         emailbody = fileToStr("email.html").format(**locals())
         olMailItem = 0x0
@@ -208,22 +199,20 @@ class RFCReport:
         email.to = config.sendMailTo
         email.Send()
 
-supportInit = ' '.join((
-    "Querying all Support SFDC cases since start of",
+supportInit = ''.join((
+    "Querying all Support SFDC cases since start of ",
     config.SFDCdaterange, "..."
 ))
 
 if __name__ == "__main__":
-    print "==TPS Report v1=="
+    print "==TPS Report v2=="
     # main execution steps
     newreport = RFCReport()
-    newreport.getTeam()
     supportQuery = ''.join((
         "SELECT CreatedBy.Name, ",
         "CreatedDate, ",
-        "InsertedById, ",
         "Parent.CaseNumber, ",
-        "ParentId, ",
+        "Parent.Cancel_Effective_Date__c, ",
         "(SELECT NewValue, FieldName ",
         "from FeedTrackedChanges) ",
         "from CaseFeed ",
