@@ -1,4 +1,5 @@
 from __future__ import division
+from datetime import date
 from simple_salesforce import Salesforce
 import config
 import json
@@ -157,11 +158,9 @@ class RFCReport:
 
     def sendEmail(self):
         dates = [x["Date"] for x in self.reportData.itervalues()]
-        oldestdate, newestdate = min(dates), max(dates)
+        daterange = [x.strftime("%B %d, %Y") for x in (min(dates), max(dates))]
         print "Amassing reindeer flotilla..."
         fulltable = self.fulltable
-        daterange = ' - '.join((str(oldestdate.strftime("%B %d, %Y")),
-                                str(newestdate.strftime("%B %d, %Y"))))
         tablemoz = config.tablemoz
         emailbody = fileToStr("email.html").format(**locals())
         olMailItem = 0x0
