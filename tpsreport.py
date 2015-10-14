@@ -71,7 +71,6 @@ class RFCReport:
         self.sf = Salesforce(username=config.username,
                              password=config.password,
                              security_token=config.security_token)
-        self.listedUsers = dict()
         self.caseData = None
         self.reportData = dict()
         self.fulltable = ''
