@@ -157,11 +157,10 @@ class RFCReport:
                               subrows='',
                               colors=config.colors, )
             formatDict["cases"] = len(each.caseCount)
-            adj = int(((formatDict["cases"]) / min((formatDict["cases"]) *
-                                                   400, cMax / 400)))
-            # adj = adj if adj < 400 else 390
+            adj = (int(((formatDict["cases"]) / cMax * 400)))
+            # adj = adj if adj < 400 else 400
             # adj = adj if adj > 60 else adj + (100 - adj / 2)
-            widthcount = 400
+            widthcount = 0
             for key in each.counts.iterkeys():
                 count = len(each.counts[key])
                 if count == 0:
@@ -170,10 +169,10 @@ class RFCReport:
                 color = formatDict["colors"][colorcount]
                 msg = """<td style="color: #fafafa;
                             background: {color};
-                            font-size: 10pt;
+                            font-size: 8pt;
                             text-align: center;
-                            padding-right: 10;
-                            padding-left: 5;
+                            padding-right: 0;
+                            padding-left: 0;
                             font-family: Arial;
                             line-height: 100%;"
                             height="20"
@@ -182,10 +181,9 @@ class RFCReport:
                         </td>""""".format(**locals())
                 colorcount += 1
                 formatDict["subrows"] += msg
-                widthcount -= nadj
+                widthcount += nadj
             formatDict["casesadj"] = widthcount
-            print widthcount
-            formatDict["casesrem"] = 400 - formatDict["casesadj"]
+            formatDict["casesrem"] = abs(400 - formatDict["casesadj"])
             print formatDict["casesrem"]
             bodypart = fileToStr("tablerowtest.html").format(**formatDict)
             self.fulltable += bodypart
@@ -198,6 +196,8 @@ class RFCReport:
         fulltable = self.fulltable
         tablemoz = config.tablemoz
         emailbody = fileToStr("email.html").format(**locals())
+        with open("email.html", "r+") as dumpfile:
+            dumpfile.write(emailbody)
         olMailItem = 0x0
         obj = win32com.client.Dispatch("Outlook.Application")
         email = obj.CreateItem(olMailItem)
