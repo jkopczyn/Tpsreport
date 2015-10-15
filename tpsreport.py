@@ -161,7 +161,7 @@ class RFCReport:
                                                    400, cMax / 400)))
             # adj = adj if adj < 400 else 390
             # adj = adj if adj > 60 else adj + (100 - adj / 2)
-            widthcount = 0
+            widthcount = 400
             for key in each.counts.iterkeys():
                 count = len(each.counts[key])
                 if count == 0:
@@ -182,7 +182,7 @@ class RFCReport:
                         </td>""""".format(**locals())
                 colorcount += 1
                 formatDict["subrows"] += msg
-                widthcount += nadj
+                widthcount -= nadj
             formatDict["casesadj"] = widthcount
             print widthcount
             formatDict["casesrem"] = 400 - formatDict["casesadj"]
