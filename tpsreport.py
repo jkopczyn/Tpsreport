@@ -62,7 +62,7 @@ class TeamMember:
         self.closedCount = set()
         self.tdCount = set()
         self.counts = dict(tds=self.tdCount, rfcs=self.rfcCount,
-                           selfs=self.closedCount, cases=self.caseCount)
+                           selfs=self.closedCount)
 
 
 class RFCReport:
@@ -75,6 +75,7 @@ class RFCReport:
         self.caseData = None
         self.reportData = dict()
         self.fulltable = ''
+        self.sorted_list = list()
         print "Login successful."
 
     def getData(self, initString, query, checkFields, exitString):
@@ -97,26 +98,27 @@ class RFCReport:
         output = dict()
         for change in data["records"]:
             for line in change["FeedTrackedChanges"]["records"]:
-                if line["NewValue"] in ("Ready For Close", "Closed"):
-                    caseid = nestedGet(["Parent", "CaseNumber"], change)
-                    changedate = dateparser.parse(change["CreatedDate"])
-                    # need to account for more than one t2 on a case
-                    if caseid in output:
-                        # chronological order - latest gets it
-                        if output[caseid]["Date"] > changedate:
-                            dupecount += 1
-                            continue
-                    if nestedGet(["Parent", "Cancel_Effective_Date__c"],
-                                 change) is not None:
-                        teardown = True
-                    else:
-                        teardown = False
-                    output[caseid] = frozendict(
-                        Name=nestedGet(["CreatedBy", "Name"], change),
-                        Case=caseid,
-                        Status=line["NewValue"],
-                        Teardown=teardown,
-                        Date=changedate)
+                if line is not None:
+                    if line["NewValue"] in ("Ready For Close", "Closed"):
+                        caseid = nestedGet(["Parent", "CaseNumber"], change)
+                        changedate = dateparser.parse(change["CreatedDate"])
+                        # need to account for more than one t2 on a case
+                        if caseid in output:
+                            # chronological order - latest gets it
+                            if output[caseid]["Date"] > changedate:
+                                dupecount += 1
+                                continue
+                        if nestedGet(["Parent", "Cancel_Effective_Date__c"],
+                                     change) is not None:
+                            teardown = True
+                        else:
+                            teardown = False
+                        output[caseid] = frozendict(
+                            Name=nestedGet(["CreatedBy", "Name"], change),
+                            Case=caseid,
+                            Status=line["NewValue"],
+                            Teardown=teardown,
+                            Date=changedate)
         print "Found and removed", dupecount, "cases handled more than " \
                                               "once."
         print "Credit for duplicates given to latest resolver."
@@ -142,25 +144,54 @@ class RFCReport:
                 nameobj.tdCount.add(case)
                 nameobj.rfcCount.discard(case)
                 nameobj.closedCount.discard(case)
-        sorted_list = sorted(listedUsers, key=lambda q: len(q.caseCount),
-                             reverse=True)
-        cMax = len(sorted_list[0].caseCount)
-        for each in sorted_list:
-            formatDict = {"agentname": each.name,
-                          "cases": len(each.caseCount)}
+        self.sorted_list = sorted(listedUsers, key=lambda q: len(q.caseCount),
+                                  reverse=True)
+
+    def emailSandwich(self):
+        """makes a delicious sandwich out of horrible Outlook-ized HTML crap.
+        You must eat it."""
+        cMax = len(self.sorted_list[0].caseCount)
+        for each in self.sorted_list:
+            colorcount = 1
+            formatDict = dict(agentname=each.name,
+                              subrows='',
+                              colors=config.colors, )
+            formatDict["cases"] = len(each.caseCount)
+            adj = int(((formatDict["cases"]) / min((formatDict["cases"]) *
+                                                   400, cMax / 400)))
+            # adj = adj if adj < 400 else 390
+            # adj = adj if adj > 60 else adj + (100 - adj / 2)
+            widthcount = 0
             for key in each.counts.iterkeys():
-                formatDict[key] = len(each.counts[key])
-                adj = int(((formatDict[key]) / min((formatDict["cases"]) *
-                           400, cMax / 400)))
-                adj = adj if adj < 400 else 390
-                formatDict[(key + "adj")] = adj
-                formatDict[(key + "rem")] = 400 - formatDict[(key + "adj")]
-                formatDict[key] = "" if formatDict[key] == 0 else \
-                    formatDict[key]
+                count = len(each.counts[key])
+                if count == 0:
+                    continue
+                nadj = int(count / (formatDict["cases"]) * adj)
+                color = formatDict["colors"][colorcount]
+                msg = """<td style="color: #fafafa;
+                            background: {color};
+                            font-size: 10pt;
+                            text-align: center;
+                            padding-right: 10;
+                            padding-left: 5;
+                            font-family: Arial;
+                            line-height: 100%;"
+                            height="20"
+                            width="{nadj}">
+                            <i><b>{count}</b></i>
+                        </td>""""".format(**locals())
+                colorcount += 1
+                formatDict["subrows"] += msg
+                widthcount += nadj
+            formatDict["casesadj"] = widthcount
+            print widthcount
+            formatDict["casesrem"] = 400 - formatDict["casesadj"]
+            print formatDict["casesrem"]
             bodypart = fileToStr("tablerowtest.html").format(**formatDict)
             self.fulltable += bodypart
 
     def sendEmail(self):
+        colors = config.colors
         d = [x["Date"] for x in self.reportData.itervalues()]
         dates = ' - '.join([x.strftime("%B %d, %Y") for x in (min(d), max(d))])
         print "Amassing reindeer flotilla..."
@@ -207,4 +238,5 @@ if __name__ == "__main__":
         exitString="total closed/RFC Support cases")
     newreport.reportData = newreport.genReport(newreport.caseData)
     newreport.printReport()
+    newreport.emailSandwich()
     newreport.sendEmail()
