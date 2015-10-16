@@ -1,5 +1,4 @@
 from __future__ import division
-from datetime import date
 from simple_salesforce import Salesforce
 import config
 import json
@@ -61,8 +60,7 @@ class TeamMember:
         self.rfcCount = set()
         self.closedCount = set()
         self.tdCount = set()
-        self.counts = dict(tds=self.tdCount, rfcs=self.rfcCount,
-                           selfs=self.closedCount)
+        self.counts = [self.rfcCount, self.tdCount, self.closedCount]
 
 
 class RFCReport:
@@ -158,14 +156,18 @@ class RFCReport:
                               colors=config.colors, )
             formatDict["cases"] = len(each.caseCount)
             adj = (int(((formatDict["cases"]) / cMax * 400)))
-            # adj = adj if adj < 400 else 400
-            # adj = adj if adj > 60 else adj + (100 - adj / 2)
             widthcount = 0
-            for key in each.counts.iterkeys():
-                count = len(each.counts[key])
+            for key in each.counts:
+                count = len(key)
+                nadj = int(count / (formatDict["cases"]) * adj)
+                nadj = nadj if nadj > 15 else 15
+                if key == each.counts[-1]:
+                    print "HEYOOOO"
+                    if widthcount + nadj < 30:
+                        nadj = 30 - widthcount
+                        print "fck"
                 if count == 0:
                     continue
-                nadj = int(count / (formatDict["cases"]) * adj)
                 color = formatDict["colors"][colorcount]
                 msg = """<td style="color: #fafafa;
                             background: {color};
@@ -196,7 +198,7 @@ class RFCReport:
         fulltable = self.fulltable
         tablemoz = config.tablemoz
         emailbody = fileToStr("email.html").format(**locals())
-        with open("email.html", "r+") as dumpfile:
+        with open("emailblah.html", 'a+') as dumpfile:
             dumpfile.write(emailbody)
         olMailItem = 0x0
         obj = win32com.client.Dispatch("Outlook.Application")
