@@ -161,12 +161,10 @@ class RFCReport:
                 count = len(key)
                 nadj = int(count / (formatDict["cases"]) * adj)
                 nadj = nadj if nadj > 15 else 15
-                if key == each.counts[-1]:
-                    print "HEYOOOO"
-                    if widthcount + nadj < 30:
-                        nadj = 30 - widthcount
-                        print "fck"
+                if count == formatDict["cases"]:
+                    nadj = 25 if nadj < 25 else nadj
                 if count == 0:
+                    colorcount += 1
                     continue
                 color = formatDict["colors"][colorcount]
                 msg = """<td style="color: #fafafa;
@@ -186,7 +184,6 @@ class RFCReport:
                 widthcount += nadj
             formatDict["casesadj"] = widthcount
             formatDict["casesrem"] = abs(400 - formatDict["casesadj"])
-            print formatDict["casesrem"]
             bodypart = fileToStr("tablerowtest.html").format(**formatDict)
             self.fulltable += bodypart
 
