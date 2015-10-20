@@ -97,7 +97,7 @@ class RFCReport:
         for change in data["records"]:
             for line in change["FeedTrackedChanges"]["records"]:
                 if line is not None:
-                    if line["NewValue"] in ("Ready For Close", "Closed"):
+                    if line["NewValue"] in ("Ready For Close", "Closed", "Cancelled", "Closed as Duplicate"):
                         caseid = nestedGet(["Parent", "CaseNumber"], change)
                         changedate = dateparser.parse(change["CreatedDate"])
                         # need to account for more than one t2 on a case
@@ -135,7 +135,7 @@ class RFCReport:
             if case["Status"] == "Ready For Close":
                 nameobj.closedCount.discard(case)
                 nameobj.rfcCount.add(case)
-            if case["Status"] == "Closed":
+            if case["Status"] in ("Closed", "Cancelled", "Closed as Duplicate"):
                 nameobj.closedCount.add(case)
                 nameobj.rfcCount.discard(case)
             if case["Teardown"]:
@@ -228,7 +228,11 @@ if __name__ == "__main__":
         " AND CreatedBy.UserRoleId = '",
         config.reportrole, "'",
         " AND CreatedDate = ",
-        config.SFDCdaterange, ")"
+        config.SFDCdaterange,
+        " AND (Parent.Status = 'Closed' ",
+        "OR Parent.Status = 'Ready For Close' ",
+        "OR Parent.Status = 'Cancelled' "
+        "OR Parent.Status = 'Closed as Duplicate'))"
     ))
     newreport.caseData = newreport.getData(
         initString=supportInit,
