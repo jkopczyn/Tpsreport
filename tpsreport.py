@@ -35,6 +35,7 @@ def prettyQuery(query):
     raw = sf.query_all(query)
     pretty = jsonizer(raw)
     print pretty
+    return pretty
 
 
 def nestedGet(checkFields, sourceDict):
