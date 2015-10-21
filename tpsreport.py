@@ -28,7 +28,7 @@ def jsonizer(rawdata):
 
 
 def prettyQuery(query):
-    """prints JSON of SOQL query. For console use."""
+    """prints JSON of SOQL query. For convenience console use."""
     sf = Salesforce(username=config.username,
                     password=config.password,
                     security_token=config.security_token)
