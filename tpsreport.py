@@ -154,7 +154,8 @@ class RFCReport:
             colorcount = 1
             formatDict = dict(agentname=each.name,
                               subrows='',
-                              colors=config.colors, )
+                              colors=config.colors,
+                              fontcolors=config.textcolors)
             formatDict["cases"] = len(each.caseCount)
             adj = (int(((formatDict["cases"]) / cMax * 400)))
             widthcount = 0
@@ -168,7 +169,8 @@ class RFCReport:
                     colorcount += 1
                     continue
                 color = formatDict["colors"][colorcount]
-                msg = """<td style="color: #fafafa;
+                fontcolor = formatDict["fontcolors"][colorcount]
+                msg = """<td style="color: {fontcolor};
                             background: {color};
                             font-size: 8pt;
                             text-align: center;
@@ -185,7 +187,7 @@ class RFCReport:
                 widthcount += nadj
             formatDict["casesadj"] = widthcount
             formatDict["casesrem"] = abs(400 - formatDict["casesadj"])
-            bodypart = fileToStr("tablerowtest.html").format(**formatDict)
+            bodypart = fileToStr("tablerow.html").format(**formatDict)
             self.fulltable += bodypart
 
     def sendEmail(self):
@@ -194,10 +196,9 @@ class RFCReport:
         dates = ' - '.join([x.strftime("%B %d, %Y") for x in (min(d), max(d))])
         print "Amassing reindeer flotilla..."
         fulltable = self.fulltable
-        tablemoz = config.tablemoz
+        tablemoz = fileToStr("logo.html").format(**locals())
+        headcolor = config.headcolor
         emailbody = fileToStr("email.html").format(**locals())
-        with open("emailblah.html", 'a+') as dumpfile:
-            dumpfile.write(emailbody)
         olMailItem = 0x0
         obj = win32com.client.Dispatch("Outlook.Application")
         email = obj.CreateItem(olMailItem)

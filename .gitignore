@@ -11,7 +11,9 @@ config.*
 *.cfg
 *.ini
 *.dat
+*.pyc
 
+/logo.html
 # Runtime data
 pids
 *.pid
