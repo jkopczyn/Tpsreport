@@ -98,7 +98,11 @@ class RFCReport:
         for change in data["records"]:
             for line in change["FeedTrackedChanges"]["records"]:
                 if line is not None:
-                    if line["NewValue"] in ("Ready For Close", "Closed", "Cancelled", "Closed as Duplicate"):
+                    if line["NewValue"] in (
+                            "Ready For Close",
+                            "Closed",
+                            "Cancelled",
+                            "Closed as Duplicate"):
                         caseid = nestedGet(["Parent", "CaseNumber"], change)
                         changedate = dateparser.parse(change["CreatedDate"])
                         # need to account for more than one t2 on a case
@@ -118,8 +122,9 @@ class RFCReport:
                             Status=line["NewValue"],
                             Teardown=teardown,
                             Date=changedate)
-        print "Found and removed", dupecount, "cases handled more than " \
-                                              "once."
+        print ("Found and removed",
+               dupecount,
+               "cases handled more than once")
         print "Credit for duplicates given to latest resolver."
         return output
 
@@ -136,14 +141,18 @@ class RFCReport:
             if case["Status"] == "Ready For Close":
                 nameobj.closedCount.discard(case)
                 nameobj.rfcCount.add(case)
-            if case["Status"] in ("Closed", "Cancelled", "Closed as Duplicate"):
+            if case["Status"] in (
+                                "Closed",
+                                "Cancelled",
+                                "Closed as Duplicate"):
                 nameobj.closedCount.add(case)
                 nameobj.rfcCount.discard(case)
             if case["Teardown"]:
                 nameobj.tdCount.add(case)
                 nameobj.rfcCount.discard(case)
                 nameobj.closedCount.discard(case)
-        self.sorted_list = sorted(listedUsers, key=lambda q: len(q.caseCount),
+        self.sorted_list = sorted(listedUsers,
+                                  key=lambda q: len(q.caseCount),
                                   reverse=True)
 
     def emailSandwich(self):
@@ -193,7 +202,8 @@ class RFCReport:
     def sendEmail(self):
         colors = config.colors
         d = [x["Date"] for x in self.reportData.itervalues()]
-        dates = ' - '.join([x.strftime("%B %d, %Y") for x in (min(d), max(d))])
+        dates = ' - '.join(
+            [x.strftime("%B %d, %Y") for x in (min(d), max(d))])
         print "Amassing reindeer flotilla..."
         fulltable = self.fulltable
         tablemoz = fileToStr("logo.html").format(**locals())
