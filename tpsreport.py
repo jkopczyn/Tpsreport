@@ -204,6 +204,9 @@ class RFCReport:
         d = [x["Date"] for x in self.reportData.itervalues()]
         dates = ' - '.join(
             [x.strftime("%B %d, %Y") for x in (min(d), max(d))])
+        drange = ' '.join(
+            ["current" if x == "this" else x for x in
+             (config.SFDCdaterange.lower().split('_'))])
         print "Amassing reindeer flotilla..."
         fulltable = self.fulltable
         tablemoz = fileToStr("logo.html").format(**locals())
