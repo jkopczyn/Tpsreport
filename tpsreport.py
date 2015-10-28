@@ -199,6 +199,8 @@ class RFCReport:
 
     def sendEmail(self):
         colors = config.colors
+        if config.closedOnly:
+            cutoff = "resolved cases only"
         d = [x["Date"] for x in self.reportData.itervalues()]
         dates = ' - '.join(
             [x.strftime("%B %d, %Y") for x in (min(d), max(d))])
@@ -227,11 +229,13 @@ supportInit = ''.join((
 if __name__ == "__main__":
 
     closedCut = ')'
+    statusString = 'Escalations-involved cases'
     if config.closedOnly:
         closedCut = ''.join((" AND (Parent.Status = 'Closed' ",
                              "OR Parent.Status = 'Ready For Close' ",
                              "OR Parent.Status = 'Cancelled' ",
                              "OR Parent.Status = 'Closed as Duplicate'))"))
+        statusString = 'Resolved Escalations-involved cases'
 
     print "==TPS Report v2=="
     # main execution steps
@@ -256,7 +260,7 @@ if __name__ == "__main__":
         initString=supportInit,
         query=supportQuery,
         checkFields=["Parent", "CaseNumber"],
-        exitString="total closed/RFC Support cases")
+        exitString=statusString)
     newreport.reportData = newreport.genReport(newreport.caseData)
     newreport.printReport()
     newreport.emailSandwich()
