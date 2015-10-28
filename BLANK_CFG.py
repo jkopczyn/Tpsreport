@@ -9,6 +9,7 @@ password = "PASSWORD"
 security_token = "SECURITYTOKEN"
 # config values:
 SFDCdaterange = 'THIS_WEEK'  # Valid SFDC/SOQL date range qualifier
+closedOnly = True  # determines if there is a current case status cutoff
 reportrole = 'ROLE'  # the SFDC ID of the role we are looking for
 sendMailTo = "RECIPIENTS"  # separated by semicolons
 # Color values, used in order for bars:

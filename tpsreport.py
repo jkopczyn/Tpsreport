@@ -122,9 +122,7 @@ class RFCReport:
                             Status=line["NewValue"],
                             Teardown=teardown,
                             Date=changedate)
-        print ("Found and removed",
-               dupecount,
-               "cases handled more than once")
+        print "Found and removed", dupecount, "cases handled more than once."
         print "Credit for duplicates given to latest resolver."
         return output
 
@@ -142,9 +140,9 @@ class RFCReport:
                 nameobj.closedCount.discard(case)
                 nameobj.rfcCount.add(case)
             if case["Status"] in (
-                                "Closed",
-                                "Cancelled",
-                                "Closed as Duplicate"):
+                    "Closed",
+                    "Cancelled",
+                    "Closed as Duplicate"):
                 nameobj.closedCount.add(case)
                 nameobj.rfcCount.discard(case)
             if case["Teardown"]:
@@ -222,11 +220,19 @@ class RFCReport:
 
 
 supportInit = ''.join((
-    "Querying all Support SFDC cases since start of ",
+    "Querying all non-open Support SFDC cases since start of ",
     config.SFDCdaterange, "..."
 ))
 
 if __name__ == "__main__":
+
+    closedCut = ')'
+    if config.closedOnly:
+        closedCut = ''.join((" AND (Parent.Status = 'Closed' ",
+                             "OR Parent.Status = 'Ready For Close' ",
+                             "OR Parent.Status = 'Cancelled' ",
+                             "OR Parent.Status = 'Closed as Duplicate'))"))
+
     print "==TPS Report v2=="
     # main execution steps
     newreport = RFCReport()
@@ -244,10 +250,7 @@ if __name__ == "__main__":
         config.reportrole, "'",
         " AND CreatedDate = ",
         config.SFDCdaterange,
-        " AND (Parent.Status = 'Closed' ",
-        "OR Parent.Status = 'Ready For Close' ",
-        "OR Parent.Status = 'Cancelled' "
-        "OR Parent.Status = 'Closed as Duplicate'))"
+        closedCut
     ))
     newreport.caseData = newreport.getData(
         initString=supportInit,
