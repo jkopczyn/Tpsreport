@@ -199,6 +199,7 @@ class RFCReport:
 
     def sendEmail(self):
         colors = config.colors
+        cutoff = ''
         if config.closedOnly:
             cutoff = "resolved cases only"
         d = [x["Date"] for x in self.reportData.itervalues()]
