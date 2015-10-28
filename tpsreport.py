@@ -4,7 +4,8 @@ import config
 import json
 import dateparser
 from frozendict import frozendict
-import win32com.client
+import webbrowser
+# import win32com.client
 
 
 def fileToStr(fileName):
@@ -213,13 +214,16 @@ class RFCReport:
         tablemoz = fileToStr("logo.html").format(**locals())
         headcolor = config.headcolor
         emailbody = fileToStr("email.html").format(**locals())
-        olMailItem = 0x0
-        obj = win32com.client.Dispatch("Outlook.Application")
-        email = obj.CreateItem(olMailItem)
-        email.Subject = "Escalation Support Activity"
-        email.HTMLBody = emailbody
-        email.to = config.sendMailTo
-        email.Send()
+        with open("output.html", "w") as output:
+            output.write(emailbody)
+        webbrowser.open_new_tab("output.html")
+        # olMailItem = 0x0
+        # obj = win32com.client.Dispatch("Outlook.Application")
+        # email = obj.CreateItem(olMailItem)
+        # email.Subject = "Escalation Support Activity"
+        # email.HTMLBody = emailbody
+        # email.to = config.sendMailTo
+        # email.Send()
 
 
 supportInit = ''.join((
