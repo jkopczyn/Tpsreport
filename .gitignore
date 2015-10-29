@@ -13,7 +13,7 @@ config.*
 *.dat
 *.pyc
 
-/logo.html
+/email/logo.html
 # Runtime data
 pids
 *.pid

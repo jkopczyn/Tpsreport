@@ -199,8 +199,8 @@ class RFCReport:
                 widthcount += nadj
             formatDict["casesadj"] = widthcount
             formatDict["casesrem"] = abs(400 - formatDict["casesadj"])
-            bodypart = fileToStr("tablerow.html").format(**formatDict)
-            self.fulltable += bodypart
+            # bodypart = fileToStr("tablerow.html").format(**formatDict)
+            # self.fulltable += bodypart
 
     def sendEmail(self):
         colors = config.colors
