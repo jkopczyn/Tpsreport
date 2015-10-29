@@ -1,0 +1,23 @@
+body {
+    background-color: #888;
+}
+
+.repChart {
+    background-color: #ccc;
+}
+
+.c3-tooltip-container th {
+    background-color: #104060
+}
+
+.c3-axis line {
+    display: none;
+}
+
+.c3-grid {
+    display: none;
+}
+
+.domain {
+    display: none;
+}

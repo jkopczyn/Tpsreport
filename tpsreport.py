@@ -6,7 +6,6 @@ import dateparser
 from frozendict import frozendict
 import webbrowser
 from collections import OrderedDict
-import jsonpickle
 # import win32com.client
 
 
@@ -293,7 +292,7 @@ if __name__ == "__main__":
     newreport.reportData = newreport.genReport(newreport.caseData)
     newreport.printReport()
     newreport.emailSandwich()
-    with open('scripts\\testdata.json', 'w') as output:
-        output.write(newreport.dataToJSON)
+    with open('scripts\\testdata.json', 'w') as foutput:
+        foutput.write(newreport.dataToJSON)
     webbrowser.open_new("http://127.0.0.1:8887/index.html")
 
