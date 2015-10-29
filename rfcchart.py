@@ -6,15 +6,6 @@ import dateparser
 from frozendict import frozendict
 import webbrowser
 from collections import OrderedDict
-# import win32com.client
-
-
-def fileToStr(fileName):
-    """Return a string containing the contents of the named file."""
-    fin = open(fileName)
-    contents = fin.read()
-    fin.close()
-    return contents
 
 
 def jsonizer(rawdata):
@@ -110,7 +101,7 @@ class RFCReport:
                             "Closed as Duplicate"):
                         caseid = nestedGet(["Parent", "CaseNumber"], change)
                         changedate = dateparser.parse(change["CreatedDate"])
-                        # need to account for more than one t2 on a case
+                        # need to account for >1 escalation per case
                         if caseid in output:
                             # chronological order - latest gets it
                             if output[caseid]["Date"] > changedate:
@@ -131,8 +122,8 @@ class RFCReport:
         print "Credit for duplicates given to latest resolver."
         return output
 
-    def printReport(self):
-        """calculate offsets for HTML table rows and generate full table"""
+    def tabulateReport(self):
+        """tabulates case data per team member"""
         print "Reticulating splines..."
         listedUsers = [TeamMember(y) for y in
                        set([x["Name"] for x in self.reportData.itervalues()])]
@@ -158,52 +149,7 @@ class RFCReport:
                                   key=lambda q: len(q.caseCount),
                                   reverse=True)
 
-    def emailSandwich(self):
-        """makes a delicious sandwich out of horrible Outlook-ized HTML crap.
-        You must eat it."""
-        cMax = len(self.sorted_list[0].caseCount)
-        for each in self.sorted_list:
-            colorcount = 1
-            formatDict = dict(agentname=each.name,
-                              subrows='',
-                              colors=config.colors,
-                              fontcolors=config.textcolors)
-            formatDict["cases"] = len(each.caseCount)
-            adj = (int(((formatDict["cases"]) / cMax * 400)))
-            widthcount = 0
-            for key in each.counts.itervalues():
-                count = len(key)
-                nadj = int(count / (formatDict["cases"]) * adj)
-                nadj = nadj if nadj > 15 else 15
-                if count == formatDict["cases"]:
-                    nadj = 25 if nadj < 25 else nadj
-                if count == 0:
-                    colorcount += 1
-                    continue
-                color = formatDict["colors"][colorcount]
-                fontcolor = formatDict["fontcolors"][colorcount]
-                msg = """<td style="color: {fontcolor};
-                            background: {color};
-                            font-size: 8pt;
-                            text-align: center;
-                            padding-right: 0;
-                            padding-left: 0;
-                            font-family: Arial;
-                            line-height: 100%;"
-                            height="20"
-                            width="{nadj}">
-                            <i><b>{count}</b></i>
-                        </td>""""".format(**locals())
-                colorcount += 1
-                formatDict["subrows"] += msg
-                widthcount += nadj
-            formatDict["casesadj"] = widthcount
-            formatDict["casesrem"] = abs(400 - formatDict["casesadj"])
-            # bodypart = fileToStr("tablerow.html").format(**formatDict)
-            # self.fulltable += bodypart
-
-    def sendEmail(self):
-        colors = config.colors
+    def updateJSON(self):
         cutoff = ''
         if config.closedOnly:
             cutoff = "resolved cases only"
@@ -213,21 +159,6 @@ class RFCReport:
         drange = ' '.join(
             ["current" if x == "this" else x for x in
              (config.SFDCdaterange.lower().split('_'))])
-        print "Amassing reindeer flotilla..."
-        fulltable = self.fulltable
-        tablemoz = fileToStr("logo.html").format(**locals())
-        headcolor = config.headcolor
-        emailbody = fileToStr("email.html").format(**locals())
-        with open("output.html", "w") as output:
-            output.write(emailbody)
-        webbrowser.open_new_tab("output.html")
-        # olMailItem = 0x0
-        # obj = win32com.client.Dispatch("Outlook.Application")
-        # email = obj.CreateItem(olMailItem)
-        # email.Subject = "Escalation Support Activity"
-        # email.HTMLBody = emailbody
-        # email.to = config.sendMailTo
-        # email.Send()
 
     @property
     def dataToJSON(self):
@@ -290,9 +221,7 @@ if __name__ == "__main__":
         checkFields=["Parent", "CaseNumber"],
         exitString=statusString)
     newreport.reportData = newreport.genReport(newreport.caseData)
-    newreport.printReport()
-    newreport.emailSandwich()
+    newreport.tabulateReport()
     with open('scripts\\testdata.json', 'w') as foutput:
         foutput.write(newreport.dataToJSON)
     webbrowser.open_new("http://127.0.0.1:8887/index.html")
-
