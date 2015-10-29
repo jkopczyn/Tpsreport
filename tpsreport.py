@@ -5,6 +5,8 @@ import json
 import dateparser
 from frozendict import frozendict
 import webbrowser
+from collections import OrderedDict
+import jsonpickle
 # import win32com.client
 
 
@@ -53,7 +55,7 @@ def nestedGet(checkFields, sourceDict):
     return reduce(dict.__getitem__, checkFields, sourceDict)
 
 
-class TeamMember:
+class TeamMember(object):
     """convenience object"""
 
     def __init__(self, name):
@@ -62,7 +64,9 @@ class TeamMember:
         self.rfcCount = set()
         self.closedCount = set()
         self.tdCount = set()
-        self.counts = [self.rfcCount, self.tdCount, self.closedCount]
+        self.counts = OrderedDict([("Ready for Close", self.rfcCount),
+                                   ("Teardowns", self.tdCount),
+                                   ("Self-Closed", self.closedCount)])
 
 
 class RFCReport:
@@ -75,6 +79,7 @@ class RFCReport:
         self.caseData = None
         self.reportData = dict()
         self.fulltable = ''
+        self.outputDict = dict()
         self.sorted_list = list()
         print "Login successful."
 
@@ -167,7 +172,7 @@ class RFCReport:
             formatDict["cases"] = len(each.caseCount)
             adj = (int(((formatDict["cases"]) / cMax * 400)))
             widthcount = 0
-            for key in each.counts:
+            for key in each.counts.itervalues():
                 count = len(key)
                 nadj = int(count / (formatDict["cases"]) * adj)
                 nadj = nadj if nadj > 15 else 15
@@ -225,6 +230,25 @@ class RFCReport:
         # email.to = config.sendMailTo
         # email.Send()
 
+    @property
+    def dataToJSON(self):
+        rowset = [['Total', ], ]
+        groups = list()
+        categories = list()
+        for each in self.sorted_list:
+            categories.append(each.name)
+            subrow = [len(each.caseCount), ]
+            for key, value in each.counts.iteritems():
+                subrow.append(len(value))
+                if key not in rowset[0]:
+                    rowset[0].append(key)
+                    groups.append(key)
+            rowset.append(subrow)
+        self.outputDict = dict(rows=rowset,
+                               groups=groups,
+                               categories=categories)
+        return jsonizer(self.outputDict)
+
 
 supportInit = ''.join((
     "Querying all non-open Support SFDC cases since start of ",
@@ -270,3 +294,5 @@ if __name__ == "__main__":
     newreport.printReport()
     newreport.emailSandwich()
     newreport.sendEmail()
+    print newreport.dataToJSON
+
