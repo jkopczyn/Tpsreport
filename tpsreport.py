@@ -293,6 +293,7 @@ if __name__ == "__main__":
     newreport.reportData = newreport.genReport(newreport.caseData)
     newreport.printReport()
     newreport.emailSandwich()
-    newreport.sendEmail()
-    print newreport.dataToJSON
+    with open('scripts\\testdata.json', 'w') as output:
+        output.write(newreport.dataToJSON)
+    webbrowser.open_new("http://127.0.0.1:8887/index.html")
 
