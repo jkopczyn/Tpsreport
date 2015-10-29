@@ -149,7 +149,8 @@ class RFCReport:
                                   key=lambda q: len(q.caseCount),
                                   reverse=True)
 
-    def updateJSON(self):
+    @property
+    def dataToJSON(self):
         cutoff = ''
         if config.closedOnly:
             cutoff = "resolved cases only"
@@ -159,9 +160,6 @@ class RFCReport:
         drange = ' '.join(
             ["current" if x == "this" else x for x in
              (config.SFDCdaterange.lower().split('_'))])
-
-    @property
-    def dataToJSON(self):
         rowset = [['Total', ], ]
         groups = list()
         categories = list()
@@ -174,7 +172,10 @@ class RFCReport:
                     rowset[0].append(key)
                     groups.append(key)
             rowset.append(subrow)
-        self.outputDict = dict(rows=rowset,
+        self.outputDict = dict(daterange=drange,
+                               dates=dates,
+                               cutoff=cutoff,
+                               rows=rowset,
                                groups=groups,
                                categories=categories)
         return jsonizer(self.outputDict)
