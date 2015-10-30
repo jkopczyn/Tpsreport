@@ -42,5 +42,5 @@ $.getJSON('scripts/testdata.json', function(data) {
                 }
             }
         }
-    })
+    });
 });
