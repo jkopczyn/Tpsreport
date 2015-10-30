@@ -80,6 +80,8 @@ pre {
 g.c3-legend-item rect.c3-legend-item-tile {
     stroke-width: 2 !important;
     stroke: #ccc !important;
+    width: 55px !important;
+    height: 15px !important;
 }
 
 .domain {
@@ -102,4 +104,10 @@ g.c3-legend-item rect.c3-legend-item-tile {
     text-align: right;
     padding: 0px 10px;
     overflow: hidden;
+}
+
+.c3-texts text {
+    fill: black !important;
+    font-weight: 900 !important;
+    display:none;
 }
