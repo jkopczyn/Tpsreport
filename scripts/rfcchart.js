@@ -9,6 +9,10 @@ $.getJSON('scripts/testdata.json', function(data) {
             groups: [data.groups],
             order:null,
             labels: true,
+            onmouseover: function (val) {
+                console.log(this);
+                rfcchart.focus(this.data.row);
+            }
             },
         color: {
             pattern: colors
