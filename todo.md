@@ -4,4 +4,4 @@
 
   * emails sent, notes added
   
-* show data labels on mouseover
+* change bar mouseover to fade others instead of self
