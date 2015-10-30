@@ -13,35 +13,34 @@ $.getJSON('scripts/testdata.json', function(data) {
                 console.log(this);
                 rfcchart.focus(this.data.row);
             }
-            },
+        },
         color: {
             pattern: colors
-            },
+        },
         axis: {
             rotated: true,
             x: {
                 type: 'category',
                 categories: data.categories
-                },
+            },
             y: {
                 show: false
-                }
-            },
+            }
+        },
         legend: {
             position: 'bottom',
             item: {
                 onmouseover: function (d) {
-                        var d2 = d.replace(/ /g, '-')
+                        var d2 = d.replace(/ /g, '-');
                         var whatlabel = ".c3-texts-" + d2 + ' text';
-                        $(whatlabel).css("display", "inline")
-                    },
+                        $(whatlabel).css("display", "inline");
+                },
                 onmouseout: function (d) {
-                        var d2 = d.replace(/ /g, '-')
+                        var d2 = d.replace(/ /g, '-');
                         var whatlabel = ".c3-texts-" + d2 + ' text';
-                        $(whatlabel).css("display", "none")
-                    }
+                        $(whatlabel).css("display", "none");
                 }
             }
-        })
-    }
-);
+        }
+    })
+});
